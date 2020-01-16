@@ -1,0 +1,377 @@
+from django.shortcuts import render
+from django.http import HttpResponse, QueryDict, HttpResponseRedirect
+from django.views import View
+from django.shortcuts import render
+from django.core.exceptions import ObjectDoesNotExist
+from django.contrib import messages
+from django.urls import reverse
+from django.contrib.auth.decorators import user_passes_test, login_required
+from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
+
+from prueba1.exceptions import UnallowedUserException
+from prueba1.forms.actividad_forms import ActividadCreacionForm, ActividadEdicionForm, ActividadVetoForm
+from prueba1.models.actividad_models import Actividad
+from prueba1.models.perfil_models import Usuario
+from prueba1.services.actividad_services import crea_actividad, edita_actividad, elimina_actividad, veta_actividad, levanta_veto_actividad, actividad_formulario
+
+
+class ListadoActividadesView(View):
+    # No se requieren permisos para visitar esta pagina
+    template_name = 'actividad/listado_actividades.html'
+
+    def get(self, request):
+        context = {}
+        # Se obtienen todas las actividades
+        actividades = Actividad.objects.all()
+        # Se consulta que usuario esta autenticado en este momento
+        try:
+            usuario = Usuario.objects.get(django_user_id = request.user.id)
+        except ObjectDoesNotExist:
+            usuario = None
+        # Se añaden al contexto las actividades y el usuario y se muestra el listado
+        context.update({'actividades': actividades, 'usuario': usuario})
+        return render(request, self.template_name, context)
+
+class CreacionActividadesView(LoginRequiredMixin, View):
+    # Todas las comprobaciones de permisos de esta vista las realiza el LoginRequiredMixin
+    template_name = 'actividad/creacion_actividades.html'
+
+    def get(self, request):
+        context = {}
+        # Se genera el formualrio vacio de la actividad a crear
+        form = ActividadCreacionForm()
+        # Se mete el formulario en el contexto y las variables para el estilo de validacion
+        # ademas de mostrar el formulario
+        context.update({
+            'form': form, 
+            'validated': False, 
+            'form_class': 'needs-validation'
+        })
+        return render(request, self.template_name, context)
+
+    def post(self, request):
+        context = {}
+        # Se crea un objeto formulario con los paramentros de entrada dados
+        form = ActividadCreacionForm(request.POST)
+        # Si el formulario es valido, se trata el formulario y se crea la actividad
+        if form.is_valid():
+            # Se valida el formulario con mas detalle
+            form.clean()
+            form_data = form.cleaned_data
+            # Se inserta el campo autor en el diccionario que representa el formulario
+            autor = Usuario.objects.get(django_user_id = request.user.id)
+            form_data.update({'autor': autor})
+            # Se intenta crear la actividad
+            try:
+                actividad_creada = crea_actividad(form_data, request)
+            # Si hay una excepcion al crear la actividad se permanece en el formulario 
+            # y se incluye un mensaje de error
+            except Exception as e:
+                messages.error(request, 'Se ha producido un error al crear la actividad')
+                # Se mete en el contexto el formulario y las variables para el estilo
+                context.update({
+                    'form': form, 
+                    'validated': True, 
+                    'form_class': 'was-validated'
+                })
+                # Se muestra el formulario de creación de la actividad
+                return render(request, self.template_name, context)
+            # Redirige al los detalles de la actividad con un mensaje de exito
+            messages.success(request, 'Se ha creado la actividad con exito')
+            return HttpResponseRedirect(reverse('actividad_detalles', kwargs = {'actividad_id': actividad_creada.id}))
+        # Si el formulario no es valido
+        else:
+            # Vuelve al formulario cuando haya un error de validacion
+            # Se valida el formulario con mas detalle
+            form.clean()
+            # Se da un mensaje de error 
+            messages.error(request, 'Se ha producido un error al crear la actividad')
+            # Se mete en el contexto el formulario y las variables para el estilo
+            context.update({
+                'form': form, 
+                'validated': True, 
+                'form_class': 'was-validated'
+            })
+            # Se muestra el formulario de la creacion de la actividad
+            return render(request, self.template_name, context)
+
+class EdicionActividadesView(LoginRequiredMixin, View):
+    # Para visitar esta pagina se requiere estar autenticado y ser el autor de la
+    # actividad
+    # El LoginRequiredMixin comprueba que el usuario esta autenticado
+    # Se debe comprobar de forma programatica que el usuario es el autor de la actividad
+    template_name = 'actividad/edicion_actividades.html'
+
+    def get(self, request, actividad_id):
+        context = {}
+        # Se comprueba que existe la actividad
+        try:
+            actividad = Actividad.objects.get(pk=actividad_id)
+        # Si la actividad no existe, se redirige al usuario al listado de actividades
+        except ObjectDoesNotExist as e:
+            return actividad_no_hallada(request)
+        # Se comprueba que el usuario es el autor de la actividad
+        # Si el usuario no es el autor de la actividad, se redirige al usuario a la 
+        # página de los detalles de la actividad con un mensaje de error
+        if not request.user.id == actividad.autor.django_user.id:
+            messages.error(request, 'No se poseen los permisos necesarios para editar la actividad')
+            return HttpResponseRedirect(reverse('actividad_detalles', kwargs = {'actividad_id': actividad_id}))
+        # Se genera un formulario en base a los datos de la actividad
+        form = actividad_formulario(actividad)
+        # Se mete el formulario y la variables de estilo en el contexto, aparte de 
+        # la id de la actividad para el atributo action del formulario
+        context.update({
+            'actividad_id': actividad_id, 
+            'form': form, 
+            'validated': False, 
+            'form_class': 'needs-validation'
+        })
+        # Se muestra el formulario de edición de la actividad
+        return render(request, self.template_name, context)
+
+    def post(self, request, actividad_id):
+        context = {}
+        # Comprueba que la actividad existe
+        try:
+            actividad = Actividad.objects.get(pk=actividad_id)
+        # Si no existe la actividad, redirige al usuario al listado de actividades
+        except ObjectDoesNotExist as e:
+            return actividad_no_hallada(request)
+        # Se comprueba que el usuario es el autor de la actividad
+        # Si el usuario no es el autor de la actividad, se redirige al usuario a la 
+        # página de los detalles de la actividad con un mensaje de error
+        if not request.user.id == actividad.autor.django_user.id:
+            messages.error(request, 'No se poseen los permisos necesarios para editar la actividad')
+            return HttpResponseRedirect(reverse('actividad_detalles', kwargs = {'actividad_id': actividad_id}))
+        # Se crea un objeto formualrio en base a los datos recibidos
+        form = ActividadEdicionForm(request.POST)
+        # Si el formulario es valido, se trata el formulario y se edita la actividad
+        if form.is_valid():
+            # Se trata el formulario con más detalle
+            form.clean()
+            form_data = form.cleaned_data
+            # Se prueba a editar la actividad
+            try:
+                edita_actividad(request, form_data, actividad)
+            # En caso de excepción, se permanece en el formulario
+            except Exception as e:
+                # Se da un mensaje de error
+                messages.error(request, 'Se ha producido un error al editar la actividad')
+                # Se meten en el contexto el formulario, las variables para el estilo de 
+                # la validación y la id de la actividad para el atributo action del formulario
+                context.update({
+                    'actividad_id': actividad_id, 
+                    'form': form, 
+                    'validated': True, 
+                    'form_class': 'was-validated'
+                })
+                # Se muestra el formulario de edicion de la actividad
+                return render(request, self.template_name, context)
+            # Si no sucede ningun error, se redirige a los detalles de la actividad
+            # junto con un mensaje de exito
+            messages.success(request, 'Se ha editado la actividad con exito')
+            return HttpResponseRedirect(reverse('actividad_detalles', kwargs = {'actividad_id': actividad.id}))
+        # Si el formulario no es valido
+        else:
+            # Se valida el formulario con mas detalle
+            form.clean()
+            # Se da un mensaje de error
+            messages.error(request, 'Se ha producido un error al editar la actividad')
+            # Se inserta en el contexto el formulario, las variables para el estilo de la 
+            # validacion y el id de la actividad para el atributo action del formulario
+            context.update({
+                'actividad_id': actividad_id, 
+                'form': form, 
+                'validated': True, 
+                'form_class': 'was-validated'
+            })
+            # Se muestra el formulario de edición al usuario
+            return render(request, self.template_name, context)
+
+class EliminacionActividadesView(LoginRequiredMixin, View):
+    # Para visitar esta pagina se requiere estar autenticado y ser el autor de la
+    # actividad
+    # El LoginRequiredMixin comprueba que el usuario esta autenticado
+    # Se debe comprobar de forma programatica que el usuario es el autor de la actividad
+    template_name = 'actividad/listado_actividades.html'
+
+    def get(self, request, actividad_id):
+        context = {}
+        # Se comprueba que existe la actividad
+        try:
+            actividad = Actividad.objects.get(pk=actividad_id)
+        # Si la actividad no existe, se redirige al usuario al listado de actividades
+        except ObjectDoesNotExist as e:
+            return actividad_no_hallada(request)
+        # Se comprueba que el usuario es el autor de la actividad
+        # Si el usuario no es el autor de la actividad, se redirige al usuario a la 
+        # página de los detalles de la actividad con un mensaje de error
+        if not request.user.id == actividad.autor.django_user.id:
+            messages.error(request, 'No se poseen los permisos necesarios para editar la actividad')
+            return HttpResponseRedirect(reverse('actividad_detalles', kwargs = {'actividad_id': actividad_id}))
+        # Se intenta eliminar la actividad
+        try:
+            elimina_actividad(request, actividad)
+        # Si hay cualquier excepción, se redirige al usuario los detalles de la actividad
+        # y se da un mensaje de error
+        except Exception as e:
+            messages.error(request, 'Se ha producido un error al eliminar la actividad')
+            return HttpResponseRedirect(reverse('actividad_detalles', kwargs = {'actividad_id': actividad_id}))
+        # Si se elimina la actividad correctamente se redirige al usuario al listado de 
+        # mensajes y se muestra un mensaje de éxito
+        messages.success(request, 'Se ha eliminado la actividad con exito')
+        return HttpResponseRedirect(reverse('actividad_listado'))        
+
+class DetallesActividadesView(View):
+    # No se requiere estar autenticado para visitar esta página
+    template_name = 'actividad/detalles_actividades.html'
+
+    def get(self, request, actividad_id):
+        context = {}
+        # Se obtiene el usuario autenticado
+        try:
+            usuario = Usuario.objects.get(django_user_id = request.user.id)
+        except ObjectDoesNotExist as e:
+            usuario = None
+        # Se busca la actividad
+        try:
+            actividad = Actividad.objects.get(pk=actividad_id)
+        # En caso de que no se encuentre la actividad, se redirige al usuario al
+        # listado de actividades
+        except ObjectDoesNotExist as e:
+            return actividad_no_hallada(request)
+        # Se añaden al contexto la actividad y el usuario
+        context.update({
+            'actividad': actividad,
+            'usuario': usuario,
+        })
+        # Se muestra la vista de detalles
+        return render(request, self.template_name, context)
+
+class VetoActividadesView(UserPassesTestMixin, View):
+    # El usuario debe estar autenticado y ser un administrador, se usará el
+    # UserPassesTestMixin pra comprobar ambos
+    template_name = 'actividad/veto_actividades.html'
+    permission_denied_message = 'No se tienen los permisos necesarios para vetar actividades'
+
+    # Se comprueba que el usuario es un administrador
+    def test_func(self):
+        usuario = Usuario.objects.get(django_user = self.request.user)
+        return usuario.es_admin
+
+    def get(self, request, actividad_id):
+        context = {}
+        # Se comprueba que existe la actividad
+        try:
+            actividad = Actividad.objects.get(pk=actividad_id)
+        # Si no existe se redirige al usuario al listado de actividades
+        except ObjectDoesNotExist as e:
+            return actividad_no_hallada(request)
+        # Se crea un fomrulario vacío para el veto de actividades
+        form = ActividadVetoForm()
+        # Se inserta en el contexto el formulario, las variables para el estilo de 
+        # validación y el id de la actividad para el atributo action del formulario
+        context.update({
+            'actividad_id': actividad_id, 
+            'form': form, 
+            'validated': False, 
+            'form_class': 'needs-validation'
+        })
+        # Se muestra el formulario de veto de actividades
+        return render(request, self.template_name, context)
+        
+    def post(self, request, actividad_id):
+        context = {}
+        # Se comprueba que existe la actividad
+        try:
+            actividad = Actividad.objects.get(pk=actividad_id)
+        # Si no la halla redirige al usuario al listado de actividades
+        except ObjectDoesNotExist as e:
+            return actividad_no_hallada(request)
+        # Se genera un formulario con los datos introducidos
+        form = ActividadVetoForm(request.POST)
+        # Si el formulario es válido
+        if form.is_valid():
+            # Se realiza una validación con más detalle
+            form.clean()
+            form_data = form.cleaned_data
+            # Trata de vetar la actividad
+            try:
+                veta_actividad(request, form_data, actividad)
+            # En cualquier otro caso, se permanece en el formulario y se incluye un 
+            # mensaje de error
+            except Exception as e:
+                messages.error(request, 'Se ha producido un error al vetar la actividad')
+                # Se introduce en el contexto el formulario, las variables para el estilo
+                # de la validación y el id de la actividad para el atributo action del 
+                # formulario
+                context.update({
+                    'actividad_id': actividad_id, 
+                    'form': form, 
+                    'validated': True, 
+                    'form_class': 'was-validated'
+                })
+                # Se muestra el formulario de veto de la actividad
+                return render(request, self.template_name, context)
+            # Si se ha tenido éxito, se redirige al usuario a los detalles de la actividad
+            # junto con un mensaje de éxito
+            messages.success(request, 'Se ha vetado la actividad con exito')
+            return HttpResponseRedirect(reverse('actividad_detalles', kwargs = {'actividad_id': actividad_id}))
+        # Si el formulario no es valido
+        else:
+            # Se realiza una validación con más detalle
+            form.clean()
+            # Se muestra un mensaje de error
+            messages.error(request, 'Se ha producido un error al vetar la actividad')
+            # Se introduce en el contexto el formulario, las variables para el estilo de 
+            # la validación y el id de la actividad para el atributo action del formulario
+            context.update({
+                'actividad_id': actividad_id, 
+                'form': form, 
+                'validated': True, 
+                'form_class': 'was-validated',
+            })
+            # Se muestra el formulario de veto de la actividad
+            return render(request, self.template_name, context)
+            
+class LevantamientoVetoActividadesView(UserPassesTestMixin, View):
+    # El usuario debe estar autenticado y ser un administrador, se usará el
+    # UserPassesTestMixin pra comprobar ambos
+    template_name = 'actividad/listado_actividades.html'
+    permission_denied_message = 'No se tienen los permisos necesarios para levantar el veto sobre actividades'
+
+    # Se comprueba que el usuario es un administrador
+    def test_func(self):
+        usuario = Usuario.objects.get(django_user = self.request.user)
+        return usuario.es_admin
+
+    def get(self, request, actividad_id):
+        context = {}
+        # Se trata de obtener la actividad
+        try:
+            actividad = Actividad.objects.get(pk=actividad_id)
+        # Si no se encuentra la actividad se redirige al listado de actividades
+        except ObjectDoesNotExist as e:
+            return actividad_no_hallada(request)
+        # Se intenta levantar el veto sobre la actividad
+        try:
+            levanta_veto_actividad(request, actividad)
+        # Si sucede alguna excepción, se redirige al usuario al listado de actividades con un mensaje de error
+        except Exception as e:
+            messages.error(request, 'No se poseen los permisos o requisitos necesarios para realizar esta accion')
+            messages.error(request, e.args)
+            return HttpResponseRedirect(reverse('actividad_listado'))
+        # En caso de éxito, se redirige al usuario al listado de actividades con un mensaje de éxito
+        messages.success(request, 'Se ha levantado el veto sobre la actividad con éxito')
+        return HttpResponseRedirect(reverse('actividad_listado'))
+
+
+#   Funciones utiles
+
+def actividad_no_hallada(request):
+    messages.error(request, 'No se ha encontrado la actividad')
+    try:
+        usuario = Usuario.objects.get(django_user_id = request.user.id)
+    except ObjectDoesNotExist:
+        usuario = None
+    return HttpResponseRedirect(reverse('actividad_listado'))

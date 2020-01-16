@@ -1,0 +1,31 @@
+{% extends "master_page/master_page.html" %}
+
+{% block title %}Detalles de actividades{% endblock %}
+
+{% block body %}
+
+    <div>
+
+        <h3>Identificador : {{ actividad.identificador }}</h3>
+        <p>Titulo : {{ actividad.titulo }}</p>
+        <p>Descripcion : {{ actividad.descripcion }}</p>
+        <p>Fecha de creacion : {{ actividad.fecha_creacion }}</p> 
+        <p>Autor : {{ actividad.autor.django_user.first_name }} {{ actividad.autor.django_user.last_name }} </p>
+        {% if not actividad.vetada %}
+            <p><a href="{{actividad.enlace}}">Enlace a la actividad</a></p>
+        {% elif actividad.vetada %}
+            <p>Motivo de veto : {{ actividad.motivo_veto }}</p>
+        {% endif %}
+
+    </div>
+
+    {% if actividad.borrador and actividad.autor == usuario %}
+        <td>
+            <button onclick="window.location.href = '/actividad/edicion/{{ actividad.id }}/'">Editar actividad</button>    
+        </td>
+        <td>
+            <button onclick="alerta_eliminar('Desea eliminar esta actividad ?', '/actividad/eliminacion/{{ actividad.id }}/')">Eliminar actividad</button>    
+        </td>
+    {% endif %}
+
+{% endblock %}
