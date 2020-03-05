@@ -75,13 +75,14 @@ def veta_actividad(request, form_data, actividad):
     actividad.full_clean()
     actividad.save(update_fields = ['motivo_veto', 'vetada'])
 
+@transaction.atomic
 def levanta_veto_actividad(request, actividad):
     usuario = Usuario.objects.get(django_user_id = request.user.id)
     if not usuario.es_admin:
         raise Exception('Se requieren permisos de administrador para realizar esta accion')
     if not actividad.vetada:
         raise Exception('No se puede levantar el veto sobre una actividad no vetada')
-    actividad.motivo_veto = ''
+    actividad.motivo_veto = None
     actividad.vetada = False
     actividad.full_clean()
     actividad.save(update_fields = ['motivo_veto', 'vetada'])

@@ -5,6 +5,7 @@ from django.shortcuts import render
 from django.core.exceptions import ObjectDoesNotExist
 from django.contrib import messages
 from django.urls import reverse
+from django.contrib.auth.mixins import LoginRequiredMixin
 
 from prueba1.exceptions import UnallowedUserException
 from prueba1.forms.perfil_forms import UsuarioForm,  AnexoForm
@@ -49,14 +50,14 @@ class DetallesPerfilView(View):
             messages.error(request, 'Se debe estar autenticado para acceder al perfil')
             return HttpResponseRedirect(reverse('home'))
         # Si se encuentra el usuario, se buscan sus anexos y se le muestra su perfil
-        anexos = Anexo.objects.filter(usuario_id = usuario.id)
+        anexos = Anexo.objects.filter(usuario_id = usuario.id).order_by('id')
         context.update({
             'usuario': usuario,
             'anexos': anexos,
         })
         return render(request, self.template_name, context)
 
-class EdicionPerfilView(View):
+class EdicionPerfilView(LoginRequiredMixin, View):
     template_name = 'perfil/edicion_perfil.html'
 
     def get(self, request):
@@ -103,7 +104,7 @@ class EdicionPerfilView(View):
                 })
                 return render(request, self.template_name, context)
             messages.success(request, 'Se ha editado el perfil con exito')
-            return HttpResponseRedirect(reverse('home'))
+            return HttpResponseRedirect(reverse('login'))
         else:
             form.clean()
             messages.error(request, 'Ha habido un error al editar el perfil')
@@ -114,7 +115,7 @@ class EdicionPerfilView(View):
             })
             return render(request, self.template_name, context)
 
-class CreacionAnexoView(View):
+class CreacionAnexoView(LoginRequiredMixin, View):
     template_name = 'perfil/formulario_anexo.html'
 
     def get(self, request):
@@ -177,7 +178,7 @@ class CreacionAnexoView(View):
             })
             return render(request, self.template_name, context)
 
-class EdicionAnexoView(View):
+class EdicionAnexoView(LoginRequiredMixin, View):
     template_name = 'perfil/formulario_anexo.html'
 
     def get(self, request, anexo_id):
@@ -188,11 +189,14 @@ class EdicionAnexoView(View):
             messages.error(request, 'Se debe estar autenticado para acceder a la edicion de anexos')
             return HttpResponseRedirect(reverse('perfil_detalles'))
         try:
-            anexo = Anexo.objects.get(pk=anexo_id)
-            form = anexo_formulario(anexo)                
+            anexo = Anexo.objects.get(pk=anexo_id)              
         except ObjectDoesNotExist as e:
             messages.error(request, 'No se ha encontrado el anexo')
             return HttpResponseRedirect(reverse('perfil_detalles'))
+        if anexo.usuario != usuario:
+            messages.error(request, 'No tienes los permisos o requisitos necesarios para realizar esta accion')
+            return HttpResponseRedirect(reverse('perfil_detalles'))
+        form = anexo_formulario(anexo)  
         context.update({
             'anexo_id': anexo_id, 
             'form': form, 
@@ -204,25 +208,29 @@ class EdicionAnexoView(View):
     def post(self, request, anexo_id):
         context = {}
         form = AnexoForm(request.POST)
+        try:
+            usuario = Usuario.objects.get(django_user_id = request.user.id)
+        except ObjectDoesNotExist as e:
+            messages.error(request, 'Se debe estar autenticado para acceder a la edicion de anexos')
+            return HttpResponseRedirect(reverse('perfil_detalles'))
+        try: 
+            anexo = Anexo.objects.get(pk=anexo_id)
+        # Si no se encuentra el anexo se redirige al usuario a los detalles del perfil
+        except ObjectDoesNotExist as e:
+            messages.error(request, 'No se ha encontrado el anexo')
+            return HttpResponseRedirect(reverse('perfil_detalles'))
+        if anexo.usuario != usuario:
+            messages.error(request, 'No tienes los permisos o requisitos necesarios para realizar esta accion')
+            return HttpResponseRedirect(reverse('perfil_detalles'))
         if form.is_valid():
             # Trata los datos del formulario y crea la actividad
             form.clean()
             form_data = form.cleaned_data
             try:
-                usuario = Usuario.objects.get(django_user_id = request.user.id)
-            except ObjectDoesNotExist as e:
-                messages.error(request, 'Se debe estar autenticado para acceder a la edicion de anexos')
-                return HttpResponseRedirect(reverse('perfil_detalles'))
-            try:
-                anexo = Anexo.objects.get(pk=anexo_id)
                 edita_anexo(anexo, form_data, usuario)
             # El usuario no está permitido, por lo que se le redirige a los detalles del perfil
             except UnallowedUserException as e:
                 messages.error(request, e.msg)
-                return HttpResponseRedirect(reverse('perfil_detalles'))
-            # Si no se encuentra el anexo se redirige al usuario a los detalles del perfil
-            except ObjectDoesNotExist as e:
-                messages.error(request, 'No se ha encontrado el anexo')
                 return HttpResponseRedirect(reverse('perfil_detalles'))
             # En cualquier otro caso, se permanece en el formulario y se incluye un mensaje
             except Exception as e:
@@ -247,7 +255,7 @@ class EdicionAnexoView(View):
             })
             return render(request, self.template_name, context)
 
-class EliminacionAnexoView(View):
+class EliminacionAnexoView(LoginRequiredMixin, View):
     template_name = 'perfil/detalles_perfil.html'
 
     def get(self, request, anexo_id):

@@ -6,7 +6,8 @@
 
     <div>
 
-        <form method="post" action="/actividad/veto/{{actividad_id}}/">
+        <form method="post" action="/actividad/veto/{{actividad_id}}/"
+            onsubmit="return confirm('¿ Desea vetar la actividad ?')">
             {% csrf_token %}
             {# Include the hidden fields #}
             {% for hidden in form.hidden_fields %}

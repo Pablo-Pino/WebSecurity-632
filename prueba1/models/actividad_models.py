@@ -23,3 +23,9 @@ class Actividad(models.Model):
         # No puede haber una actividad vetada sin motivo de veto
         if self.vetada and not self.motivo_veto:
             raise ValidationError('No puede haber una actividad vetada sin motivo de veto')
+
+class SesionActividad(models.Model):
+    usuario = models.ForeignKey(Usuario, on_delete = models.CASCADE)
+    token = models.CharField(max_length = 30)
+    actividad = models.ForeignKey(Actividad, on_delete = models.CASCADE)
+    

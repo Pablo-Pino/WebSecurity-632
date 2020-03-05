@@ -24,7 +24,7 @@
             <button onclick="window.location.href = '/actividad/edicion/{{ actividad.id }}/'">Editar actividad</button>    
         </td>
         <td>
-            <button onclick="alerta_eliminar('Desea eliminar esta actividad ?', '/actividad/eliminacion/{{ actividad.id }}/')">Eliminar actividad</button>    
+            <button id="button_eliminar" onclick="alerta_redireccion('Desea eliminar esta actividad ?', '/actividad/eliminacion/{{ actividad.id }}/')">Eliminar actividad</button>    
         </td>
     {% endif %}
 

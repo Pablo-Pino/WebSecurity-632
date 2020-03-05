@@ -23,7 +23,7 @@ from django.contrib.auth import views as auth_views
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('usuario/registro/', RegistroUsuarioView.as_view()),
-    path('login/', auth_views.LoginView.as_view(template_name='perfil/login.html', redirect_authenticated_user=True)),
+    path('login/', auth_views.LoginView.as_view(template_name='perfil/login.html', redirect_authenticated_user=True), name = 'login'),
     path('logout/', auth_views.LogoutView.as_view(next_page='/')),
     path('', HomeView.as_view(), name = 'home'),
     path('actividad/listado/', ListadoActividadesView.as_view(), name = 'actividad_listado'),
@@ -35,7 +35,7 @@ urlpatterns = [
     path('actividad/levantamiento_veto/<int:actividad_id>/', LevantamientoVetoActividadesView.as_view()),
     path('perfil/detalles/', DetallesPerfilView.as_view(), name = 'perfil_detalles'),
     path('perfil/edicion/', EdicionPerfilView.as_view(), name = 'perfil_edicion'),
-    path('anexo/creacion_edicion/', CreacionAnexoView.as_view()),
-    path('anexo/creacion_edicion/<int:anexo_id>/', EdicionAnexoView.as_view()),
-    path('anexo/eliminacion/<int:anexo_id>/', EliminacionAnexoView.as_view()),
+    path('anexo/creacion_edicion/', CreacionAnexoView.as_view(), name = 'anexo_creacion'),
+    path('anexo/creacion_edicion/<int:anexo_id>/', EdicionAnexoView.as_view(), name = 'anexo_edicion'),
+    path('anexo/eliminacion/<int:anexo_id>/', EliminacionAnexoView.as_view(), name = 'anexo_eliminacion'),
 ]

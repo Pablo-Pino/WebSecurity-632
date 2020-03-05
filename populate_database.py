@@ -67,27 +67,27 @@ for usuario in usuarios:
 
 anexo_1 = Anexo(
     usuario = usuario_1,
-    anexo = 'https://garcia1ertrabajo.com'
+    anexo = 'https://garcia1ertrabajo.com/'
 )
 
 anexo_2 = Anexo(
     usuario = usuario_1,
-    anexo = 'https://garciaempresa.com'
+    anexo = 'https://garciaempresa.com/'
 )
 
 anexo_3 = Anexo(
     usuario = usuario_1,
-    anexo = 'https://garciaofertas.com'
+    anexo = 'https://garciaofertas.com/'
 )
 
 anexo_4 = Anexo(
     usuario = usuario_1,
-    anexo = 'https://garciainfo.com'
+    anexo = 'https://garciainfo.com/'
 )
 
 anexo_5 = Anexo(
     usuario = usuario_2,
-    anexo = 'https://normasdelsistema.com'
+    anexo = 'https://normasdelsistema.com/'
 )
 
 anexos = [
@@ -106,7 +106,7 @@ for anexo in anexos:
 
 actividad_1 = Actividad(
     titulo = 'SQL por Federico',
-    enlace = 'https://sqlfederico.com',
+    enlace = 'https://sqlfederico.com/',
     descripcion = 'Un tutorial de SQLi basico por Federico. Comentarios son bienvenidos.',
     comentable = True,
     autor = usuario_1,
@@ -118,7 +118,7 @@ actividad_1 = Actividad(
 
 actividad_2 = Actividad(
     titulo = 'JPQL',
-    enlace = 'https://jpqlfed.com',
+    enlace = 'https://jpqlfed.com/',
     descripcion = 'Ejercicios del lenguaje JPQL, que conecta Java con bases de datos',
     comentable = False,
     autor = usuario_1,
@@ -130,7 +130,7 @@ actividad_2 = Actividad(
 
 actividad_3 = Actividad(
     titulo = 'Angular en detalles',
-    enlace = 'https://jpqlfed.com',
+    enlace = 'https://jpqlfed.com/',
     descripcion = 'Tutoriales avanzados de Angular. Aun por completar.',
     comentable = False,
     autor = usuario_1,
@@ -142,7 +142,7 @@ actividad_3 = Actividad(
 
 actividad_4 = Actividad(
     titulo = 'Actividad de prueba',
-    enlace = 'https://prueba.com',
+    enlace = 'https://prueba.com/',
     descripcion = 'Para ver que todo funciona bien.',
     comentable = False,
     autor = usuario_2,
@@ -154,7 +154,7 @@ actividad_4 = Actividad(
 
 actividad_5 = Actividad(
     titulo = 'Vendo coche',
-    enlace = 'https://cochesgratis.com',
+    enlace = 'https://cochesgratis.com/',
     descripcion = 'El Ferrari esta como nuevo',
     comentable = True,
     autor = usuario_3,
@@ -165,12 +165,26 @@ actividad_5 = Actividad(
     motivo_veto = 'Esto no es una página de compraventa'
 )
 
+actividad_6 = Actividad(
+    titulo = 'Una actividad extraña',
+    enlace = 'https://testing.com/',
+    descripcion = 'Para ver cómo funciona la lógica de la aplicación',
+    comentable = False,
+    autor = usuario_1,
+    borrador = True,
+    vetada = True,
+    fecha_creacion = date(2019, 11, 20),
+    identificador = 'ACT-12345serfv',
+    motivo_veto = 'El testeo es vital'
+)
+
 actividades = [
     actividad_1,
     actividad_2,
     actividad_3,
     actividad_4,
     actividad_5,
+    actividad_6,
 ]
 
 for actividad in actividades:

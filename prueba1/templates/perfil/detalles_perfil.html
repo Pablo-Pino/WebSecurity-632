@@ -4,7 +4,7 @@
 
 {% block body %}
 
-    <div>
+    <div id='id_body_detalles_perfil'>
 
         <p>Nombre : {{ usuario.django_user.first_name }}</p>
         <p>Apellidos : {{ usuario.django_user.last_name }}</p>
@@ -12,12 +12,16 @@
         <p>Telefono : {{ usuario.telefono }}</p>
         <p>Empresa/equipo : {{ usuario.empresa_u_equipo }}</p>        
 
-        <fieldset><legend>Anexos</legend>
+        <fieldset id='id_fieldset_anexos'><legend>Anexos</legend>
             <ul>
                 {% for anexo in anexos %}
-                    <li><a href="{{ anexo.anexo }}">{{ anexo.anexo }}</a></li>
-                    <button onclick="window.location.href = '/anexo/creacion_edicion/{{ anexo.id }}/'">Editar anexo</button>
-                    <button onclick="window.location.href = '/anexo/eliminacion/{{ anexo.id }}/'">Eliminar anexo</button>
+                    <li>
+                        <a href="{{ anexo.anexo }}">{{ anexo.anexo }}</a>
+                        <br>
+                        <button onclick="window.location.href = '/anexo/creacion_edicion/{{ anexo.id }}/'">Editar anexo</button>
+                        <button onclick="window.location.href = '/anexo/eliminacion/{{ anexo.id }}/'">Eliminar anexo</button>
+                    </li>
+                    <br>
                 {% endfor %}
             </ul>
             <button onclick="window.location.href = '/anexo/creacion_edicion/'">Crear nuevo anexo</button>
