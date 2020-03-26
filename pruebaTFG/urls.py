@@ -14,13 +14,21 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
-from django.urls import path
+from django.urls import path, include
 from prueba1.views.actividad_views import ListadoActividadesView, CreacionActividadesView, EdicionActividadesView, EliminacionActividadesView, DetallesActividadesView, VetoActividadesView, LevantamientoVetoActividadesView
 from prueba1.views.perfil_views import RegistroUsuarioView, DetallesPerfilView, EdicionPerfilView, CreacionAnexoView, EdicionAnexoView, EliminacionAnexoView
+from prueba1.views.sesionactividad_views import SesionActividadComienzo, SesionActividadFinal
+from prueba1.views.views import EjercicioMock1View, EjercicioMock2View, EjercicioMock3View
 from prueba1.views.views import HomeView
 from django.contrib.auth import views as auth_views
+from rest_framework import routers
 
 urlpatterns = [
+    path('ejercicio/mock/1/', EjercicioMock1View.as_view(), name = 'ejercicio_mock_1'),
+    path('ejercicio/mock/2/', EjercicioMock2View.as_view(), name = 'ejercicio_mock_2'),
+    path('ejercicio/mock/3/', EjercicioMock3View.as_view(), name = 'ejercicio_mock_3'),
+    path('sesionactividad/comienzo/<str:identificador>/', SesionActividadComienzo.as_view(), name='sesionactividad_comienzo'),
+    path('sesionactividad/final/<str:identificador>/', SesionActividadFinal.as_view(), name = 'sesionactividad_final'),
     path('admin/', admin.site.urls),
     path('usuario/registro/', RegistroUsuarioView.as_view()),
     path('login/', auth_views.LoginView.as_view(template_name='perfil/login.html', redirect_authenticated_user=True), name = 'login'),

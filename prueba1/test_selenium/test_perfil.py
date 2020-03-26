@@ -4,8 +4,9 @@ from django.contrib.messages.middleware import MessageMiddleware
 from django.contrib.sessions.middleware import SessionMiddleware
 from django.db.models import Q
 from django.core.exceptions import ObjectDoesNotExist
+from selenium.webdriver import FirefoxProfile
 
-from selenium.webdriver.firefox.webdriver import WebDriver
+from selenium.webdriver.chrome.webdriver import WebDriver
 from selenium import webdriver
 from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.common.keys import Keys
@@ -46,6 +47,10 @@ class PerfilTestCase(StaticLiveServerTestCase):
 
     def logout(self):
         self.selenium.get('%s%s' % (self.live_server_url, '/logout'))
+
+
+
+    # TEST DETALLES
 
     # Un usuario accede a los detalles de su perfil
     def test_detalles_mi_perfil(self):
@@ -98,6 +103,10 @@ class PerfilTestCase(StaticLiveServerTestCase):
         boton_creacion = self.selenium.find_element_by_xpath('//fieldset/child::button')
         self.assertEqual(boton_creacion.get_attribute('onclick'), 'window.location.href = \'/anexo/creacion_edicion/\'')
         self.assertEqual(boton_creacion.text, 'Crear nuevo anexo')
+
+
+
+    # TEST EDICION PERFIL
 
     # Un usuario edita su perfil
     def test_editar_mi_perfil(self):
@@ -205,6 +214,10 @@ class PerfilTestCase(StaticLiveServerTestCase):
         self.assertEqual(error_email_text, 'Introduzca una dirección de correo electrónico válida.')
         # El usuario se desloguea
         self.logout()
+
+
+
+    # TEST ADICION ANEXO
 
     # Un usuario añade un anexo a su perfil
     def test_añadir_anexo(self):
@@ -362,6 +375,10 @@ class PerfilTestCase(StaticLiveServerTestCase):
         self.assertEqual(error_anexo_text, 'Introduzca una URL válida.')
         # El usuario se desloguea
         self.logout()
+
+
+
+    # TEST ELIMINACION ANEXO
 
     # Un usuario elimina un anexo
     def test_eliminar_anexo(self):

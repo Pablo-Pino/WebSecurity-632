@@ -26,6 +26,6 @@ class Actividad(models.Model):
 
 class SesionActividad(models.Model):
     usuario = models.ForeignKey(Usuario, on_delete = models.CASCADE)
-    token = models.CharField(max_length = 30)
     actividad = models.ForeignKey(Actividad, on_delete = models.CASCADE)
+    token = models.CharField(max_length = 100)
     

@@ -4,8 +4,9 @@ from django.contrib.messages.middleware import MessageMiddleware
 from django.contrib.sessions.middleware import SessionMiddleware
 from django.db.models import Q
 from django.core.exceptions import ObjectDoesNotExist
+from selenium.webdriver import FirefoxProfile
 
-from selenium.webdriver.firefox.webdriver import WebDriver
+from selenium.webdriver.chrome.webdriver import WebDriver
 from selenium import webdriver
 from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.common.keys import Keys
@@ -49,7 +50,9 @@ class ActividadTestCase(StaticLiveServerTestCase):
     def logout(self):
         self.selenium.get('%s%s' % (self.live_server_url, '/logout'))
 
-    '''
+
+
+    # TESTS DE LISTADO
 
     # Un usuario que no es administrador accede al listado de actividades
     def test_listado_actividades_no_admin(self):
@@ -157,31 +160,95 @@ class ActividadTestCase(StaticLiveServerTestCase):
             self.assertEqual(usuario.es_admin and not a.borrador and a.vetada, boton_levanta_veto)
             i = i + 1
 
-    # Un usuario accede a los detalles de una actividad no baneada
-    def test_detalles_actividad_no_baneada(self):
+
+
+    # TEST DE DETALLES
+
+    # Para comprobar los botones de vetar y levantar el veto, además del motivo de veto y el enlace a la actividad
+
+    # Un usuario accede a los detalles de una actividad no baneada y no es administrador
+    def test_detalles_actividad_no_baneada_no_admin(self):
         # El usuario se loguea y se inicializan las variables más relevantes
-        self.login('usuario1', 'usuario1')
+        usuario = self.login('usuario1', 'usuario1')
         actividad = Actividad.objects.filter(borrador=False).first()
         # Se comprueban que los datos mostrados son correctos
-        self.detalles_actividad(actividad)
-        # Al no estar baneada, se debe mostrar el enlace a la actividad
-        enlace = self.selenium.find_element_by_xpath('//p/child::a["Enlace a la actividad"]').get_attribute('href')
-        self.assertEqual(enlace, actividad.enlace)
+        self.detalles_actividad(actividad, usuario)
         # El usuario se desloguea
         self.logout()
 
-    # Un usuario accede a los detalles de una actividad baneada
-    def test_detalles_actividad_baneada(self):
+    # Un usuario accede a los detalles de una actividad no baneada y es administrador
+    def test_detalles_actividad_no_baneada_admin(self):
         # El usuario se loguea y se inicializan las variables más relevantes
-        self.login('usuario1', 'usuario1')
+        usuario = self.login('usuario2', 'usuario2')
+        actividad = Actividad.objects.filter(borrador=False).first()
+        # Se comprueban que los datos mostrados son correctos
+        self.detalles_actividad(actividad, usuario)
+        # El usuario se desloguea
+        self.logout()
+
+    # Un usuario accede a los detalles de una actividad baneada y no es administrador
+    def test_detalles_actividad_baneada_no_admin(self):
+        # El usuario se loguea y se inicializan las variables más relevantes
+        usuario = self.login('usuario1', 'usuario1')
         actividad = Actividad.objects.filter(Q(borrador=False) & Q(vetada=True)).first()
         # Se comprueban que los datos mostrados son correctos
         self.detalles_actividad(actividad)
-        # Al estar baneada, se debe mostrar el motivo del veto a la actividad
-        motivo_veto = self.selenium.find_elements_by_tag_name('p')[4].text
-        self.assertEqual(motivo_veto, 'Motivo de veto : {}'.format(actividad.motivo_veto))
         # El usuario se desloguea
         self.logout()
+
+    # Un usuario accede a los detalles de una actividad baneada y es administrador
+    def test_detalles_actividad_baneada_admin(self):
+        # El usuario se loguea y se inicializan las variables más relevantes
+        usuario = self.login('usuario1', 'usuario1')
+        actividad = Actividad.objects.filter(Q(borrador=False) & Q(vetada=True)).first()
+        # Se comprueban que los datos mostrados son correctos
+        self.detalles_actividad(actividad)
+        # El usuario se desloguea
+        self.logout()
+
+    # Para comprobar los botones de editar y eliminar
+
+    # Un usuario accede a los detalles de una de sus actividades en modo borrador
+    def test_detalles_actividad_propia_borrador(self):
+        # El usuario se loguea y se inicializan las variables más relevantes
+        usuario = self.login('usuario1', 'usuario1')
+        actividad = Actividad.objects.filter(Q(borrador=True) & Q(autor=usuario)).first()
+        # Se comprueban que los datos mostrados son correctos
+        self.detalles_actividad(actividad)
+        # El usuario se desloguea
+        self.logout()
+
+    # Un usuario accede a los detalles de una de sus actividades en modo no borrador
+    def test_detalles_actividad_propia_no_borrador(self):
+        # El usuario se loguea y se inicializan las variables más relevantes
+        usuario = self.login('usuario1', 'usuario1')
+        actividad = Actividad.objects.filter(Q(borrador=False) & Q(autor=usuario)).first()
+        # Se comprueban que los datos mostrados son correctos
+        self.detalles_actividad(actividad)
+        # El usuario se desloguea
+        self.logout()
+
+    # Un usuario accede a los detalles de una actividad ajena en modo borrador
+    def test_detalles_actividad_ajena_borrador(self):
+        # El usuario se loguea y se inicializan las variables más relevantes
+        usuario = self.login('usuario1', 'usuario1')
+        actividad = Actividad.objects.filter(borrador=True).exclude(autor=usuario).first()
+        # Se comprueban que los datos mostrados son correctos
+        self.detalles_actividad(actividad)
+        # El usuario se desloguea
+        self.logout()
+
+    # Un usuario accede a los detalles de una actividad ajena en modo no borrador
+    def test_detalles_actividad_ajena_no_borrador(self):
+        # El usuario se loguea y se inicializan las variables más relevantes
+        usuario = self.login('usuario1', 'usuario1')
+        actividad = Actividad.objects.filter(borrador=False).exclude(autor=usuario).first()
+        # Se comprueban que los datos mostrados son correctos
+        self.detalles_actividad(actividad)
+        # El usuario se desloguea
+        self.logout()
+
+    # Otras casuísticas de detalles
 
     # Un usuario accede a una actividad inexistente
     def test_detalles_actividad_no_existe(self):
@@ -197,7 +264,7 @@ class ActividadTestCase(StaticLiveServerTestCase):
         # El usuario se desloguea
         self.logout()
 
-    def detalles_actividad(self, actividad):
+    def detalles_actividad(self, actividad, usuario):
         # Se accede a los detalles de la actividad
         self.selenium.get('{}{}'.format(self.live_server_url, '/actividad/detalles/{}'.format(actividad.id)))
         # Se comprueba que el encabezado es el correcto
@@ -213,6 +280,75 @@ class ActividadTestCase(StaticLiveServerTestCase):
         self.assertEqual(texts[1], 'Descripcion : {}'.format(actividad.descripcion))
         self.assertEqual(texts[2], 'Fecha de creacion : {}'.format(actividad_fecha_creacion) )
         self.assertEqual(texts[3], 'Autor : {} {}'.format(actividad.autor.django_user.first_name, actividad.autor.django_user.last_name))
+        # Mira si hay un boton de editar
+        existe_boton_editar = True
+        try:
+            self.selenium.find_element_by_id('button_editar')
+        except NoSuchElementException as e:
+            existe_boton_editar = False
+        # Mira si hay un boton de eliminar
+        existe_boton_eliminar = True
+        try:
+            self.selenium.find_element_by_id('button_eliminar')
+        except NoSuchElementException as e:
+            existe_boton_eliminar = False
+        # Mira si hay un boton de vetar
+        existe_boton_vetar = True
+        try:
+            self.selenium.find_element_by_id('button_vetar')
+        except NoSuchElementException as e:
+            existe_boton_vetar = False
+        # Mira si hay un boton de levantar el veto
+        existe_boton_levantar_veto = True
+        try:
+            self.selenium.find_element_by_id('button_levantar_veto')
+        except NoSuchElementException as e:
+            existe_boton_levantar_veto = False
+        # Si el usuario es el autor de la actividad, entonces debe poder editarla o eliminarla si la actividad está en
+        # modo borrador
+        if actividad.borrador and not actividad.vetada and actividad.autor == usuario:
+            self.assertTrue(existe_boton_editar)
+            self.assertTrue(existe_boton_eliminar)
+        # En cualquier otro caso, comprueba que no aparecen los botones
+        else:
+            self.assertFalse(existe_boton_eliminar)
+            self.assertFalse(existe_boton_editar)
+        # Si la actividad no está en modo borrador, ni vetada y el usuario es un administrador, entonces aparece el botón
+        # de vetar
+        if not actividad.borrador and not actividad.vetada and usuario.es_admin:
+            self.assertTrue(existe_boton_vetar)
+        # En cualquier otro caso no aparece el boton de vetar
+        else:
+            self.assertFalse(existe_boton_vetar)
+        # Si la actividad no está en modo borrador, está vetada y el usuario es un administrador, entonces aparece el botón
+        # de levantar el veto
+        if not actividad.borrador and not actividad.vetada and usuario.es_admin:
+            self.assertTrue(existe_boton_levantar_veto)
+        # En cualquier otro caso no aparece el boton de levantar el veto
+        else:
+            self.assertFalse(existe_boton_levantar_veto)
+        # Se mira si está el enlace a la actividad
+        existe_enlace = True
+        try:
+            enlace = self.selenium.find_element_by_xpath('//p/child::a["Enlace a la actividad"]').get_attribute('href')
+            self.assertEqual(enlace, actividad.enlace)
+        except NoSuchElementException as e:
+            existe_enlace = False
+        # Se mira si está el motivo de veto de la actividad
+        existe_motivo_veto = True
+        try:
+            motivo_veto = self.selenium.find_elements_by_tag_name('p')[4].text
+            self.assertEqual(motivo_veto, 'Motivo de veto : {}'.format(actividad.motivo_veto))
+        except NoSuchElementException as e:
+            existe_motivo_veto = False
+        # Si la actividad no está baneada, entonces se debe mostrar el enlace a la actividad, miestras que si está
+        # baneada se tiene que mostrar el motivo de veto de la actividad
+        if actividad.vetada:
+            self.assertTrue(existe_enlace)
+            self.assertFalse(existe_motivo_veto)
+        else:
+            self.assertTrue(existe_motivo_veto)
+            self.assertFalse(existe_enlace)
 
     def i18_fecha(self, fecha):
         fecha = fecha.replace('January', 'Enero')
@@ -228,6 +364,10 @@ class ActividadTestCase(StaticLiveServerTestCase):
         fecha = fecha.replace('November', 'Noviembre')
         fecha = fecha.replace('December', 'Diciembre')
         return fecha
+
+
+
+    # TESTS CREACIÓN
 
     # Un usuario crea una actividad
     def test_crear_actividad(self):
@@ -299,6 +439,10 @@ class ActividadTestCase(StaticLiveServerTestCase):
         # Se verifica que se ha redirigido al usuario a la página de login, puesto a que no está autenticado
         self.assertEqual(self.selenium.current_url, self.live_server_url + '/login/?next=/actividad/creacion/')
 
+
+
+    # TESTS EDICIÓN
+
     # Un usuario edita una actividad
     def test_editar_actividad(self):
         # EL usuario se loguea
@@ -335,7 +479,7 @@ class ActividadTestCase(StaticLiveServerTestCase):
         # El usuario se desloguea
         self.logout()
 
-    # El usuario edita una avtividad dejándola vacía
+    # El usuario edita una actividad dejándola vacía
     def test_editar_actividad_vacia(self):
         # El usuario se loguea
         self.login('usuario1', 'usuario1')
@@ -384,7 +528,7 @@ class ActividadTestCase(StaticLiveServerTestCase):
         usuario = self.login('usuario2', 'usuario2')
         # Se obtienen variables necesarias para el test
         actividad = Actividad.objects.exclude(autor=usuario).filter(borrador=True).first()
-        # Se accede a la edición dela actividad
+        # Se accede a la edición de la actividad
         self.selenium.get('%s%s' % (self.live_server_url, '/actividad/edicion/{}/'.format(actividad.id)))
         # Se comprueba que el usuario ha sido redirigido a los detalles de la actividad
         self.assertEqual(self.selenium.current_url, self.live_server_url + '/actividad/detalles/{}/'.format(actividad.id))
@@ -409,6 +553,10 @@ class ActividadTestCase(StaticLiveServerTestCase):
         self.assertEqual(message_danger.text, 'No se puede editar una actividad que no está en modo borrador')
         # El usuario se desloguea
         self.logout()
+
+
+
+    # TESTS ELIMINACIÓN
 
     # Un usuario elimina una actividad
     def test_eliminar_actividad(self):
@@ -446,6 +594,8 @@ class ActividadTestCase(StaticLiveServerTestCase):
         self.logout()     
 
     # Un usuario va a eliminar una actividad pero no acepta la eliminación
+
+    # Un usuario elimina una actividad, pero cancela la eliminación
     def test_eliminar_actividad_sin_aceptar(self):
         # El usuario se loguea
         usuario = self.login('usuario1', 'usuario1')
@@ -478,6 +628,8 @@ class ActividadTestCase(StaticLiveServerTestCase):
         self.logout() 
 
     # Un usuario va a eliminar una actividad sin autenticarse
+
+    # Un usuario elimina una actividad sin estar autenticado
     def test_eliminar_actividad_sin_autenticar(self):
         # Se obtienen variables necesarias para el test
         actividad = Actividad.objects.filter(borrador=True).first()
@@ -518,7 +670,9 @@ class ActividadTestCase(StaticLiveServerTestCase):
         # El usuario se desloguea
         self.logout()
 
-    '''
+
+
+    # TESTS VETO
 
     # Un admnistrador trata de vetar una actividad
     def test_veta_actividad(self):
@@ -598,7 +752,7 @@ class ActividadTestCase(StaticLiveServerTestCase):
         # Se comprueba que se está en la página de login
         self.assertEqual('{}/login/?next=/actividad/veto/{}/'.format(self.live_server_url, actividad.id), self.selenium.current_url)
 
-    # Un administrador que no es administrador trata de vetar al actividad
+    # Un administrador que no es administrador trata de vetar la actividad
     def test_veta_actividad_usuario_incorrecto(self):
         # El usuario se loguea
         usuario = self.login('usuario1', 'usuario1')
@@ -693,6 +847,10 @@ class ActividadTestCase(StaticLiveServerTestCase):
         self.assertEqual(message_danger.text, 'No se puede vetar una actividad que está en modo borrador')
         # El usuario se desloguea
         self.logout()
+
+
+
+    # TESTS LEVANTAMIENTO VETO
 
     # Un administrador levanta el veto sobre una actividad
     def test_levanta_veto_actividad(self):

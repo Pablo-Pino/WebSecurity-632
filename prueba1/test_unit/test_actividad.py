@@ -29,7 +29,7 @@ class ActividadTestCase(TestCase):
 
     # Un usuario accede al listado de actividades correctamente
     def test_lista_actividades(self):
-        # Se inicializan variaables y el usuario se loguea
+        # Se inicializan variables y el usuario se loguea
         username = 'usuario1'
         password = 'usuario1'
         self.login(username, password)
@@ -211,6 +211,7 @@ class ActividadTestCase(TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertRedirects(response, '/actividad/detalles/{}/'.format(actividad.id))
         # Se comprueba que los datos almacenados son los esperados
+        self.assertEqual(actividad, actividad_editada)
         self.assertEqual(actividad_editada.titulo, titulo)
         self.assertURLEqual(actividad_editada.enlace, enlace)
         self.assertEqual(actividad_editada.descripcion, descripcion)
@@ -246,7 +247,7 @@ class ActividadTestCase(TestCase):
         # ha accedido a una página que require autenticación sin estar autenticado
         self.assertEqual(response.status_code, 302)
         self.assertRedirects(response, '/login/?next=/actividad/edicion/{}/'.format(actividad.id))
-        # Se comprueba que no se ha editado nada
+        # Se comprueba que no se ha editado ninguno de los campos editables
         self.assertEqual(actividad_despues.titulo, actividad.titulo)
         self.assertEqual(actividad_despues.descripcion, actividad.descripcion)
         self.assertURLEqual(actividad_despues.enlace, actividad.enlace)
@@ -281,7 +282,7 @@ class ActividadTestCase(TestCase):
         # actividad. Esto se debe a que no puede editar una actividad que no le pertenece.
         self.assertEqual(response.status_code, 302)
         self.assertRedirects(response, '/actividad/detalles/{}/'.format(actividad.id))
-        # Se comprueba que no se ha editado nada
+        # Se comprueba que no se ha editado ninguno de los campos editables
         self.assertEqual(actividad_despues.titulo, actividad.titulo)
         self.assertEqual(actividad_despues.descripcion, actividad.descripcion)
         self.assertURLEqual(actividad_despues.enlace, actividad.enlace)
@@ -500,6 +501,7 @@ class ActividadTestCase(TestCase):
         # al login debido a que hay que esrar autenticado para vetar una actividad.
         self.assertEqual(response.status_code, 302)
         self.assertRedirects(response, '/login/?next=/actividad/veto/{}/'.format(actividad.id))
+        # Se comprueba que la actividad no ha sido vetada
         self.assertEqual(actividad_despues.vetada, False)
         self.assertEqual(actividad_despues.motivo_veto, None)
         # El usuario se desloguea
