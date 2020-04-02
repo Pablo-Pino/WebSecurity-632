@@ -38,7 +38,7 @@ class CreacionActividadesView(LoginRequiredMixin, View):
 
     def get(self, request):
         context = {}
-        # Se genera el formualrio vacio de la actividad a crear
+        # Se genera el formulario vacio de la actividad a crear
         form = ActividadCreacionForm()
         # Se mete el formulario en el contexto y las variables para el estilo de validacion
         # ademas de mostrar el formulario

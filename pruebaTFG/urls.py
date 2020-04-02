@@ -17,7 +17,7 @@ from django.contrib import admin
 from django.urls import path, include
 from prueba1.views.actividad_views import ListadoActividadesView, CreacionActividadesView, EdicionActividadesView, EliminacionActividadesView, DetallesActividadesView, VetoActividadesView, LevantamientoVetoActividadesView
 from prueba1.views.oferta_views import ListadoOfertaView, CreacionOfertaView, DetallesOfertaView, EdicionOfertaView, \
-    EliminacionOfertaView
+    EliminacionOfertaView, VetoOfertaView, LevantamientoVetoOfertaView, CierreOfertaView
 from prueba1.views.perfil_views import RegistroUsuarioView, DetallesPerfilView, EdicionPerfilView, CreacionAnexoView, EdicionAnexoView, EliminacionAnexoView
 from prueba1.views.sesionactividad_views import SesionActividadComienzo, SesionActividadFinal
 from prueba1.views.views import EjercicioMock1View, EjercicioMock2View, EjercicioMock3View
@@ -37,12 +37,12 @@ urlpatterns = [
     path('logout/', auth_views.LogoutView.as_view(next_page='/')),
     path('', HomeView.as_view(), name = 'home'),
     path('actividad/listado/', ListadoActividadesView.as_view(), name = 'actividad_listado'),
-    path('actividad/creacion/', CreacionActividadesView.as_view()),
-    path('actividad/edicion/<int:actividad_id>/', EdicionActividadesView.as_view()),
-    path('actividad/eliminacion/<int:actividad_id>/', EliminacionActividadesView.as_view()),
+    path('actividad/creacion/', CreacionActividadesView.as_view(), name='actividad_creacion'),
+    path('actividad/edicion/<int:actividad_id>/', EdicionActividadesView.as_view(), name='actividad_edicion'),
+    path('actividad/eliminacion/<int:actividad_id>/', EliminacionActividadesView.as_view(), name='actividad_eliminacion'),
     path('actividad/detalles/<int:actividad_id>/', DetallesActividadesView.as_view(), name = 'actividad_detalles'),
-    path('actividad/veto/<int:actividad_id>/', VetoActividadesView.as_view()),
-    path('actividad/levantamiento_veto/<int:actividad_id>/', LevantamientoVetoActividadesView.as_view()),
+    path('actividad/veto/<int:actividad_id>/', VetoActividadesView.as_view(), name='actividad_veto'),
+    path('actividad/levantamiento_veto/<int:actividad_id>/', LevantamientoVetoActividadesView.as_view(), name='actividad_levantamiento_veto'),
     path('perfil/detalles/', DetallesPerfilView.as_view(), name = 'perfil_detalles'),
     path('perfil/edicion/', EdicionPerfilView.as_view(), name = 'perfil_edicion'),
     path('oferta/listado/', ListadoOfertaView.as_view(), name='oferta_listado'),
@@ -50,6 +50,9 @@ urlpatterns = [
     path('oferta/edicion/<int:oferta_id>/', EdicionOfertaView.as_view(), name='oferta_edicion'),
     path('oferta/detalles/<int:oferta_id>/', DetallesOfertaView.as_view(), name='oferta_detalles'),
     path('oferta/eliminacion/<int:oferta_id>/', EliminacionOfertaView.as_view(), name='oferta_eliminacion'),
+    path('oferta/veto/<int:oferta_id>/', VetoOfertaView.as_view(), name='oferta_veto'),
+    path('oferta/levantamiento_veto/<int:oferta_id>/', LevantamientoVetoOfertaView.as_view(), name='oferta_levantamiento_veto'),
+    path('oferta/cierre/<int:oferta_id>/', CierreOfertaView.as_view(), name='oferta_cierre'),
     path('anexo/creacion_edicion/', CreacionAnexoView.as_view(), name = 'anexo_creacion'),
     path('anexo/creacion_edicion/<int:anexo_id>/', EdicionAnexoView.as_view(), name = 'anexo_edicion'),
     path('anexo/eliminacion/<int:anexo_id>/', EliminacionAnexoView.as_view(), name = 'anexo_eliminacion'),

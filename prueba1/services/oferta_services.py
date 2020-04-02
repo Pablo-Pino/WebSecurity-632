@@ -68,11 +68,9 @@ def edita_oferta(request, form_data, oferta):
     return oferta
 
 @transaction.atomic
-def cierra_oferta(request, form_data, oferta):
+def cierra_oferta(request, oferta):
     if not oferta.autor.django_user.id == request.user.id:
         raise UnallowedUserException()
-    if not oferta.borrador:
-        raise Exception('No se puede editar una oferta que no está en modo borrador')
     oferta.cerrada = True
     oferta.full_clean()
     oferta.save(update_fields = ['cerrada'])

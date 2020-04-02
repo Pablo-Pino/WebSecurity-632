@@ -255,21 +255,14 @@ class VetoOfertaView(UserPassesTestMixin, View):
 
     def get(self, request, oferta_id):
         context = {}
-        # Se comprueba que existe la oferta
-        try:
-            oferta = Oferta.objects.get(pk=oferta_id)
-        # Si no existe se redirige al usuario al listado de oferta
-        except ObjectDoesNotExist as e:
-            return oferta_no_hallada(request)
-        # Si la oferta está vetada no se puede vetar, por lo que se redirige al usuario a la vista de detalles
-        if oferta.vetada:
-            messages.error(request, 'No se puede vetar una oferta ya vetada')
-            return HttpResponseRedirect(reverse('oferta_detalles', kwargs = {'oferta_id': oferta_id}))
-        # Si la oferta está en modo borrador, no se puede vetar
-        if oferta.borrador:
-            messages.error(request, 'No se puede vetar una oferta que está en modo borrador')
-            return HttpResponseRedirect(reverse('oferta_detalles', kwargs = {'oferta_id': oferta_id}))
-        # Se comprueba que el usuario es el autor de la oferta
+        # Se comprueba que se puede vetar la oferta
+        res = comprueba_vetar_oferta(request, oferta_id)
+        # Si el resultado es una oferta, se almacena en la variable correspondiente
+        if isinstance(res, Oferta):
+            oferta = res
+        # Si el resultado es una redirección, entonces se aplica la redirección
+        elif isinstance(res, HttpResponseRedirect):
+            return res
         # Se crea un formulario vacío para el veto de oferta
         form = OfertaVetoForm()
         # Se inserta en el contexto el formulario, las variables para el estilo de 
@@ -285,20 +278,14 @@ class VetoOfertaView(UserPassesTestMixin, View):
         
     def post(self, request, oferta_id):
         context = {}
-        # Se comprueba que existe la oferta
-        try:
-            oferta = Oferta.objects.get(pk=oferta_id)
-        # Si no la halla redirige al usuario al listado de oferta
-        except ObjectDoesNotExist as e:
-            return oferta_no_hallada(request)
-        # Si la oferta está vetada no se puede vetar, por lo que se redirige al usuario a la vista de detalles
-        if oferta.vetada:
-            messages.error(request, 'No se puede vetar una oferta ya vetada')
-            return HttpResponseRedirect(reverse('oferta_detalles', kwargs = {'oferta_id': oferta_id}))
-        # Si la oferta está en modo borrador, no se puede vetar
-        if oferta.borrador:
-            messages.error(request, 'No se puede vetar una oferta que está en modo borrador')
-            return HttpResponseRedirect(reverse('oferta_detalles', kwargs = {'oferta_id': oferta_id}))
+        # Se comprueba que se puede vetar la oferta
+        res = comprueba_vetar_oferta(request, oferta_id)
+        # Si el resultado es una oferta, se almacena en la variable correspondiente
+        if isinstance(res, Oferta):
+            oferta = res
+        # Si el resultado es una redirección, entonces se aplica la redirección
+        elif isinstance(res, HttpResponseRedirect):
+            return res
         # Se genera un formulario con los datos introducidos
         form = OfertaVetoForm(request.POST)
         # Si el formulario es válido
@@ -360,20 +347,17 @@ class LevantamientoVetoOfertaView(UserPassesTestMixin, View):
 
     def get(self, request, oferta_id):
         context = {}
-        # Se trata de obtener la oferta
-        try:
-            oferta = Oferta.objects.get(pk=oferta_id)
-        # Si no se encuentra la oferta se redirige al listado de oferta
-        except ObjectDoesNotExist as e:
-            return oferta_no_hallada(request)
-        # Si la oferta no está vetada no se puede levantar el veto, por lo que se redirige al usuario a la vista de detalles
-        if not oferta.vetada:
-            messages.error(request, 'No se puede levantar el veto a una oferta sin vetar')
-            return HttpResponseRedirect(reverse('oferta_detalles', kwargs = {'oferta_id': oferta_id}))
-        # Si la oferta está en modo borrador, no se puede vetar
-        if oferta.borrador:
-            messages.error(request, 'No se puede levantar el veto a una oferta que está en modo borrador')
-            return HttpResponseRedirect(reverse('oferta_detalles', kwargs = {'oferta_id': oferta_id}))
+        print('minga dominga')
+        # Se comprueba que se puede levantar el veto sobre la oferta
+        res = comprueba_levantar_veto_oferta(request, oferta_id)
+        print('pringles')
+        # Si el resultado es una oferta, entonces se almacena en la variable correspondiente
+        if isinstance(res, Oferta):
+            oferta = res
+        # Si el resultado es una redirección, entonces se aplica la redirección
+        elif isinstance(res, HttpResponseRedirect):
+            return res
+        print('ok google')
         # Se intenta levantar el veto sobre la oferta
         try:
             levanta_veto_oferta(request, oferta)
@@ -391,20 +375,14 @@ class CierreOfertaView(LoginRequiredMixin, View):
 
     def get(self, request, oferta_id):
         context = {}
-        # Se trata de obtener la oferta
-        try:
-            oferta = Oferta.objects.get(pk=oferta_id)
-        # Si no se encuentra la oferta se redirige al listado de oferta
-        except ObjectDoesNotExist as e:
-            return oferta_no_hallada(request)
-        # Si la oferta está vetada no se puede cerrar
-        if oferta.vetada:
-            messages.error(request, 'No se puede cerrar una ofertaa vetada')
-            return HttpResponseRedirect(reverse('oferta_detalles', kwargs = {'oferta_id': oferta_id}))
-        # Si la oferta está en modo borrador, no se puede cerrar
-        if oferta.borrador:
-            messages.error(request, 'No se puede levantar el veto a una oferta que está en modo borrador')
-            return HttpResponseRedirect(reverse('oferta_detalles', kwargs = {'oferta_id': oferta_id}))
+        # Se comprueba que se puede cerrar la oferta
+        res = comprueba_cerrar_oferta(request, oferta_id)
+        # Si el resultado es una oferta, entonces se almacena en la variable correspondiente
+        if isinstance(res, Oferta):
+            oferta = res
+        # Si el resultado es una redirección, entonces se aplica la redirección
+        elif isinstance(res, HttpResponseRedirect):
+            return res
         # Se intenta cerrar la oferta
         try:
             cierra_oferta(request, oferta)
@@ -481,4 +459,67 @@ def comprueba_eliminar_oferta(request, oferta_id):
         messages.error(request, 'No se poseen los permisos necesarios para editar la oferta')
         return HttpResponseRedirect(reverse('oferta_detalles', kwargs={'oferta_id': oferta_id}))
     # Se devuelve la oferta para usarla más adelante
+    return oferta
+
+def comprueba_vetar_oferta(request, oferta_id):
+    # Se comprueba que existe la oferta
+    try:
+        oferta = Oferta.objects.get(pk=oferta_id)
+    # Si no existe se redirige al usuario al listado de oferta
+    except ObjectDoesNotExist as e:
+        return oferta_no_hallada(request)
+    # Si la oferta está vetada no se puede vetar, por lo que se redirige al usuario a la vista de detalles
+    if oferta.vetada:
+        messages.error(request, 'No se puede vetar una oferta ya vetada')
+        return HttpResponseRedirect(reverse('oferta_detalles', kwargs={'oferta_id': oferta_id}))
+    # Si la oferta está en modo borrador, no se puede vetar
+    if oferta.borrador:
+        messages.error(request, 'No se puede vetar una oferta que está en modo borrador')
+        return HttpResponseRedirect(reverse('oferta_detalles', kwargs={'oferta_id': oferta_id}))
+    # Si la oferta está cerrada, no se puede vetar
+    if oferta.cerrada:
+        messages.error(request, 'No se puede vetar una oferta que está cerrada')
+        return HttpResponseRedirect(reverse('oferta_detalles', kwargs={'oferta_id': oferta_id}))
+    return oferta
+
+def comprueba_levantar_veto_oferta(request, oferta_id):
+    # Se trata de obtener la oferta
+    try:
+        oferta = Oferta.objects.get(pk=oferta_id)
+    # Si no se encuentra la oferta se redirige al listado de oferta
+    except ObjectDoesNotExist as e:
+        return oferta_no_hallada(request)
+    # Si la oferta no está vetada no se puede levantar el veto, por lo que se redirige al usuario a la vista de detalles
+    if not oferta.vetada:
+        messages.error(request, 'No se puede levantar el veto a una oferta sin vetar')
+        return HttpResponseRedirect(reverse('oferta_detalles', kwargs={'oferta_id': oferta_id}))
+    # Si la oferta está en modo borrador, no se puede levantar el veto
+    if oferta.borrador:
+        messages.error(request, 'No se puede levantar el veto a una oferta que está en modo borrador')
+        return HttpResponseRedirect(reverse('oferta_detalles', kwargs={'oferta_id': oferta_id}))
+    # Si la oferta está cerrada, entonces no se puede levantar el veto
+    if oferta.cerrada:
+        messages.error(request, 'No se puede levantar el veto a una oferta que está cerrada')
+        return HttpResponseRedirect(reverse('oferta_detalles', kwargs={'oferta_id': oferta_id}))
+    return oferta
+
+def comprueba_cerrar_oferta(request, oferta_id):
+    # Se trata de obtener la oferta
+    try:
+        oferta = Oferta.objects.get(pk=oferta_id)
+    # Si no se encuentra la oferta se redirige al listado de oferta
+    except ObjectDoesNotExist as e:
+        return oferta_no_hallada(request)
+    # Si la oferta está vetada no se puede cerrar, por lo que se redirige al usuario a la vista de detalles
+    if oferta.vetada:
+        messages.error(request, 'No se cerrar una oferta vetada')
+        return HttpResponseRedirect(reverse('oferta_detalles', kwargs={'oferta_id': oferta_id}))
+    # Si la oferta está en modo borrador, no se puede cerrar
+    if oferta.borrador:
+        messages.error(request, 'No se puede cerrar una oferta que está en modo borrador')
+        return HttpResponseRedirect(reverse('oferta_detalles', kwargs={'oferta_id': oferta_id}))
+    # Si la oferta está cerrada, entonces no se puede cerrar
+    if oferta.cerrada:
+        messages.error(request, 'No se puede cerrar una oferta que está cerrada')
+        return HttpResponseRedirect(reverse('oferta_detalles', kwargs={'oferta_id': oferta_id}))
     return oferta

@@ -22,20 +22,25 @@
                     <td>
                         <button onclick="window.location.href = '/oferta/detalles/{{ oferta.id }}/'">Detalles de la oferta</button>
                     </td>
-                    {% if oferta.borrador and oferta.autor == usuario %}
-                        <td>
-                            <button onclick="window.location.href = '/oferta/edicion/{{ oferta.id }}/'">Editar oferta</button>
-                        </td>
-                        <td>
-                            <button id="button_eliminar_{{ oferta.id }}" onclick="alerta_redireccion('Desea eliminar esta oferta ?', '/oferta/eliminacion/{{ oferta.id }}/')">Eliminar oferta</button>
-                        </td>
-                    {% endif %}
                     {% if not oferta.cerrada %}
-                        {% if usuario.es_admin and not oferta.vetada %}
+                        {% if oferta.borrador and oferta.autor == usuario %}
+                            <td>
+                                <button onclick="window.location.href = '/oferta/edicion/{{ oferta.id }}/'">Editar oferta</button>
+                            </td>
+                            <td>
+                                <button id="button_eliminar_{{ oferta.id }}" onclick="alerta_redireccion('Desea eliminar esta oferta ?', '/oferta/eliminacion/{{ oferta.id }}/')">Eliminar oferta</button>
+                            </td>
+                        {% endif %}
+                        {% if not oferta.borrador and oferta.autor == usuario %}
+                            <td>
+                                <button id="button_cerrar_{{ oferta.id }}" onclick="alerta_redireccion('Desea cerrar esta oferta ?', '/oferta/cierre/{{ oferta.id }}/')">Cerrar oferta</button>
+                            </td>
+                        {% endif %}
+                        {% if usuario.es_admin and not oferta.vetada and not oferta.borrador %}
                             <td>
                                 <button id="button_vetar_{{ oferta.id }}" onclick="window.location.href = '/oferta/veto/{{ oferta.id }}/'">Vetar oferta</button>
                             </td>
-                        {% elif usuario.es_admin and oferta.vetada %}
+                        {% elif usuario.es_admin and oferta.vetada and not oferta.borrador %}
                             <td>
                                 <button id="button_levantar_veto_{{ oferta.id }}" onclick="alerta_redireccion('Desea levantar el veto sobre est oferta ?', '/oferta/levantamiento_veto/{{ oferta.id }}/')">Levantar el veto sobre la oferta</button>
                             </td>

@@ -7,6 +7,15 @@
     <div>
 
         <h3>Identificador : {{ oferta.identificador }}</h3>
+
+        {% if oferta.cerrada %}
+            <h4 style="color:red;">CERRADA</h4>
+        {% endif %}
+
+        {% if oferta.vetada %}
+            <h4 style="color:red;">VETADA</h4>
+        {% endif %}
+
         <p>Titulo : {{ oferta.titulo }}</p>
         <p>Descripcion : {{ oferta.descripcion }}</p>
         <p>Fecha de creacion : {{ oferta.fecha_creacion }}</p>
@@ -29,12 +38,17 @@
 
     </div>
 
-    {% if oferta.borrador and oferta.autor == usuario %}
+    {% if oferta.borrador and oferta.autor == usuario and not oferta.vetada and not oferta.cerrada %}
         <td>
             <button onclick="window.location.href = '/oferta/edicion/{{ oferta.id }}/'">Editar oferta</button>
         </td>
         <td>
             <button id="button_eliminar" onclick="alerta_redireccion('Desea eliminar esta oferta ?', '/oferta/eliminacion/{{ oferta.id }}/')">Eliminar oferta</button>
+        </td>
+    {% endif %}
+    {% if not oferta.borrador and oferta.autor == usuario and not oferta.vetada and not oferta.cerrada %}
+        <td>
+            <button id="button_cerrar_{{ oferta.id }}" onclick="alerta_redireccion('Desea cerrar esta oferta ?', '/oferta/cierre/{{ oferta.id }}/')">Cerrar oferta</button>
         </td>
     {% endif %}
 

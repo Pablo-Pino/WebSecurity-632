@@ -1,13 +1,13 @@
 {% extends "master_page/master_page.html" %}
 
-{% block title %}Veto a actividades{% endblock %}
+{% block title %}Veto a ofertaes{% endblock %}
 
 {% block body %}
 
     <div>
 
-        <form method="post" action="/actividad/veto/{{actividad_id}}/"
-            onsubmit="return confirm('¿ Desea vetar la actividad ?')">
+        <form method="post" action="/oferta/veto/{{oferta_id}}/"
+            onsubmit="return confirm('¿ Desea vetar la oferta ?')">
             {% csrf_token %}
             {# Include the hidden fields #}
             {% for hidden in form.hidden_fields %}
@@ -15,7 +15,7 @@
             {% endfor %}
             {# Include the visible fields #}
             {% include 'blocks/input_text.html' with type='textarea' field=form.motivo_veto was_validated=validated id='id_motivo_veto' %}
-            <input type="submit" value="Vetar la actividad" />
+            <input type="submit" value="Vetar la oferta" />
         </form>
 
     </div>
