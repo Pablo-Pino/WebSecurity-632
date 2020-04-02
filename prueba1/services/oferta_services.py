@@ -26,6 +26,9 @@ def lista_ofertas(request):
 def crea_oferta(oferta_dict, request):
     if not request.user.is_authenticated:
         raise Exception('Se debe estar autenticado para crear una oferta')
+    for actividad in oferta_dict['actividades']:
+        if actividad.vetada or actividad.borrador:
+            raise Exception('Se han incluido actividades no válidas')
     oferta = Oferta(
         titulo = oferta_dict['titulo'],
         descripcion = oferta_dict['descripcion'],
@@ -59,6 +62,9 @@ def edita_oferta(request, form_data, oferta):
         raise UnallowedUserException()
     if not oferta.borrador:
         raise Exception('No se puede editar una oferta que no está en modo borrador')
+    for actividad in form_data['actividades']:
+        if actividad.vetada or actividad.borrador:
+            raise Exception('Se han incluido actividades no válidas')
     oferta.titulo = form_data['titulo']
     oferta.descripcion = form_data['descripcion']
     oferta.actividades.set(form_data['actividades'])

@@ -12,7 +12,7 @@ class OfertaCreacionForm(forms.Form):
     titulo = forms.CharField(max_length=100, widget=forms.TextInput(attrs={'class': 'form-control'}))
     descripcion = forms.CharField(max_length=1000, widget=forms.Textarea(attrs={'class': 'form-control'}))
     actividades = ActividadChoiceField(queryset=Actividad.objects.filter(borrador=False, vetada=False),
-                                       widget=forms.SelectMultiple(attrs={'class': 'form-control'}))
+            widget=forms.SelectMultiple(attrs={'class': 'form-control'}))
 
 class OfertaEdicionForm(forms.Form):
     titulo = forms.CharField(max_length=100, widget=forms.TextInput(attrs={'class': 'form-control'}))

@@ -35,7 +35,8 @@ class ActividadTestCase(TestCase):
         self.login(username, password)
         # Se crean variables con los datos correctos
         usuario_esperado = Usuario.objects.get(django_user__username = username)
-        actividades_esperadas = list(Actividad.objects.filter(Q(autor__django_user__username = username) | Q(borrador = False)).order_by('id'))
+        actividades_esperadas = list(Actividad.objects.filter(Q(autor__django_user__username = username) | Q(borrador = False) &
+                Q(vetada=False)).order_by('id'))
         # Se simula una petición al listado de la actividad
         response = self.client.get('/actividad/listado/')
         # Se obtienen los resultados
@@ -47,6 +48,28 @@ class ActividadTestCase(TestCase):
         self.assertEqual(usuario_esperado, usuario_recibido)
         # El usuario se desloguea
         self.logout()
+
+        # Un administrador accede al listado de actividades correctamente
+        def test_lista_actividades_admin(self):
+            # Se inicializan variables y el usuario se loguea
+            username = 'usuario2'
+            password = 'usuario2'
+            self.login(username, password)
+            # Se crean variables con los datos correctos
+            usuario_esperado = Usuario.objects.get(django_user__username=username)
+            actividades_esperadas = list(Actividad.objects.filter(Q(autor__django_user__username=username) |
+                    Q(borrador=False)).order_by('id'))
+            # Se simula una petición al listado de la actividad
+            response = self.client.get('/actividad/listado/')
+            # Se obtienen los resultados
+            usuario_recibido = response.context['usuario']
+            actividades_recibidas = list(response.context['actividades'].order_by('id'))
+            # Se comprueba que los resultados son correctos
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(actividades_esperadas, actividades_recibidas)
+            self.assertEqual(usuario_esperado, usuario_recibido)
+            # El usuario se desloguea
+            self.logout()
 
     # Un usuario accede a los detalles de una actividad correctamente
     def test_detalles_actividad(self):

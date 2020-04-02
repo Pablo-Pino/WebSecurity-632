@@ -172,7 +172,7 @@ actividad_6 = Actividad(
     descripcion = 'Para ver cómo funciona la lógica de la aplicación',
     comentable = False,
     autor = usuario_1,
-    borrador = True,
+    borrador = False,
     vetada = True,
     fecha_creacion = date(2019, 11, 20),
     identificador = 'ACT-12345serfv',
@@ -274,31 +274,132 @@ oferta_1 = Oferta(
     motivo_veto = None,
 )
 
-
-
 oferta_2 = Oferta(
     titulo = 'JPQL',
-    descripcion = 'Se busca desarrolador de querys de Spring',
+    descripcion = 'Se busca desarrollador de querys de Spring',
     autor = usuario_1,
     borrador = False,
     vetada = False,
     fecha_creacion = date(2019, 12, 12),
-    identificador = 'OFR-ASDFGCVBnm',
+    identificador = 'OFR-Asfgrgreq2',
     cerrada = False,
     motivo_veto = None,
 )
 
+oferta_3 = Oferta(
+    titulo = 'Parlo italiano',
+    descripcion = 'Traductor de italiano-español. Para más información consultar en la página del grupo Itaes',
+    autor = usuario_2,
+    borrador = False,
+    vetada = False,
+    fecha_creacion = date(2017, 11, 12),
+    identificador = 'OFR-ASDFGCVBnr',
+    cerrada = False,
+    motivo_veto = None,
+)
+
+oferta_4 = Oferta(
+    titulo = 'JavaScript Senior con 10 años de experiencia',
+    descripcion = 'El sueldo sería de 2000 $ al mes en Alemania con gastos de viviendia y transporte cubiertos',
+    autor = usuario_2,
+    borrador = True,
+    vetada = False,
+    fecha_creacion = date(2019, 6, 4),
+    identificador = 'OFR-gredos12AS',
+    cerrada = False,
+    motivo_veto = None,
+)
+
+oferta_5 = Oferta(
+    titulo = 'Java de instituto',
+    descripcion = '''Se ofrece un puesto de profesor de Informática para alumnos de Bachillerato. 
+            Se piden conocimientos básicos de Java y capacidad para la enseñanza''',
+    autor = usuario_3,
+    borrador = False,
+    vetada = False,
+    fecha_creacion = date(2019, 12, 3),
+    identificador = 'OFR-GNORegre43',
+    cerrada = False,
+    motivo_veto = None,
+)
+
+oferta_6 = Oferta(
+    titulo = 'Limpiapiscinas',
+    descripcion = 'Alguien interesado par limpiar la piscina de mi casa ?',
+    autor = usuario_3,
+    borrador = False,
+    vetada = True,
+    fecha_creacion = date(2019, 12, 12),
+    identificador = 'OFR-ASDFG123wm',
+    cerrada = False,
+    motivo_veto = 'No tiene nada que ver con la informática o la ciberseguridad',
+)
+
+oferta_7 = Oferta(
+    titulo = 'Proyecto de la Nasa',
+    descripcion = 'April\'s Fools!',
+    autor = usuario_1,
+    borrador = False,
+    vetada = True,
+    fecha_creacion = date(2019, 4, 1),
+    identificador = 'OFR-ASDdrgt67d',
+    cerrada = False,
+    motivo_veto = 'Evitemos contenido innecesario',
+)
+
+oferta_8 = Oferta(
+    titulo = 'Experto en API REST',
+    descripcion = '''Se buscan ingenieros con competencias en el diseño de API REST. Se requiere conocimientos de 
+            PHP''',
+    autor = usuario_1,
+    borrador = True,
+    vetada = False,
+    fecha_creacion = date(2019, 12, 3),
+    identificador = 'OFR-ASDFGCLOB0',
+    cerrada = True,
+    motivo_veto = None,
+)
+
+oferta_9 = Oferta(
+    titulo = 'Big Data en Madrid',
+    descripcion = '''Si te interesa la oferta, puedes contactar con nosotros en datosgrandes.es. Puedes encontrar 
+            nuestras oficinas en la C/Toronto nº 43 en Madrid o Avd de los Reyes en Barcelona nº 2.''',
+    autor = usuario_1,
+    borrador = False,
+    vetada = False,
+    fecha_creacion = date(2019, 1, 23),
+    identificador = 'OFR-ASDFGCohuh',
+    cerrada = True,
+    motivo_veto = None,
+)
+
 ofertas = [
-   oferta_1,
-   oferta_2,
+    oferta_1,
+    oferta_2,
+    oferta_3,
+    oferta_4,
+    oferta_5,
+    oferta_6,
+    oferta_7,
+    oferta_8,
+    oferta_9
 ]
 
 for oferta in ofertas:
     oferta.full_clean()
     oferta.save()
 
+# No usar actividades 3, 5 o 6
 oferta_1.actividades.set([actividad_1, actividad_2])
-oferta_2.actividades.set([actividad_7])
+oferta_2.actividades.set([actividad_7],)
+oferta_3.actividades.set([actividad_8],)
+oferta_4.actividades.set([actividad_9],)
+oferta_5.actividades.set([actividad_7, actividad_9])
+oferta_6.actividades.set([actividad_2])
+oferta_7.actividades.set([actividad_4])
+oferta_8.actividades.set([actividad_7, actividad_1, actividad_2])
+oferta_9.actividades.set([actividad_7, actividad_9])
+
 
 for oferta in ofertas:
     oferta.full_clean()
