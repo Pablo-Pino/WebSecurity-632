@@ -1,6 +1,7 @@
 from django.contrib.auth.models import User
 from prueba1.models.actividad_models import Actividad, SesionActividad
 from prueba1.models.perfil_models import Usuario, Anexo
+from prueba1.models.oferta_models import Oferta
 from datetime import date
 
 # Django users
@@ -261,5 +262,46 @@ for sesionactividad in sesionactividades:
     sesionactividad.full_clean()
     sesionactividad.save()
 
+oferta_1 = Oferta(
+    titulo = 'Oferta developer',
+    descripcion = 'Se busca developer',
+    autor = usuario_1,
+    borrador = False,
+    vetada = False,
+    fecha_creacion = date(2019, 11, 20),
+    identificador = 'OFR-12345ASDxc',
+    cerrada = False,
+    motivo_veto = None,
+)
+
+
+
+oferta_2 = Oferta(
+    titulo = 'JPQL',
+    descripcion = 'Se busca desarrolador de querys de Spring',
+    autor = usuario_1,
+    borrador = False,
+    vetada = False,
+    fecha_creacion = date(2019, 12, 12),
+    identificador = 'OFR-ASDFGCVBnm',
+    cerrada = False,
+    motivo_veto = None,
+)
+
+ofertas = [
+   oferta_1,
+   oferta_2,
+]
+
+for oferta in ofertas:
+    oferta.full_clean()
+    oferta.save()
+
+oferta_1.actividades.set([actividad_1, actividad_2])
+oferta_2.actividades.set([actividad_7])
+
+for oferta in ofertas:
+    oferta.full_clean()
+    oferta.save()
 
 

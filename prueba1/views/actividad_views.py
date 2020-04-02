@@ -207,11 +207,11 @@ class EliminacionActividadesView(LoginRequiredMixin, View):
     def get(self, request, actividad_id):
         context = {}
         # Se comprueba que existe la actividad
-        #try:
-        actividad = Actividad.objects.get(pk=actividad_id)
+        try:
+            actividad = Actividad.objects.get(pk=actividad_id)
         # Si la actividad no existe, se redirige al usuario al listado de actividades
-        #except ObjectDoesNotExist as e:
-            #return actividad_no_hallada(request)
+        except ObjectDoesNotExist as e:
+            return actividad_no_hallada(request)
         # Si la actividad no está en modo borrador, no se puede eliminar
         if not actividad.borrador:
             messages.error(request, 'No se puede eliminar una actividad que no está en modo borrador')

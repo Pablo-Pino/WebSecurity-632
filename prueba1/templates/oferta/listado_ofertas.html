@@ -1,0 +1,50 @@
+{% extends "master_page/master_page.html" %}
+
+{% block title %}Listado de ofertas{% endblock %}
+
+{% block body %}
+        
+    <div>
+        
+        <table class="table">
+            <tr>
+                <th>Titulo</th>  
+                <th>Descripcion</th>
+                <th>Fecha de creacion</th>
+                <th>Autor</th>
+            </tr>
+            {% for oferta in ofertas %}
+                <tr>
+                    <td>{{ oferta.titulo }}</td>
+                    <td>{{ oferta.descripcion }}</td>
+                    <td>{{ oferta.fecha_creacion | date:"SHORT_DATE_FORMAT" }}</td>
+                    <td>{{ oferta.autor.django_user.first_name }} {{ oferta.autor.django_user.last_name }}</td>
+                    <td>
+                        <button onclick="window.location.href = '/oferta/detalles/{{ oferta.id }}/'">Detalles de la oferta</button>
+                    </td>
+                    {% if oferta.borrador and oferta.autor == usuario %}
+                        <td>
+                            <button onclick="window.location.href = '/oferta/edicion/{{ oferta.id }}/'">Editar oferta</button>
+                        </td>
+                        <td>
+                            <button id="button_eliminar_{{ oferta.id }}" onclick="alerta_redireccion('Desea eliminar esta oferta ?', '/oferta/eliminacion/{{ oferta.id }}/')">Eliminar oferta</button>
+                        </td>
+                    {% endif %}
+                    {% if not oferta.cerrada %}
+                        {% if usuario.es_admin and not oferta.vetada %}
+                            <td>
+                                <button id="button_vetar_{{ oferta.id }}" onclick="window.location.href = '/oferta/veto/{{ oferta.id }}/'">Vetar oferta</button>
+                            </td>
+                        {% elif usuario.es_admin and oferta.vetada %}
+                            <td>
+                                <button id="button_levantar_veto_{{ oferta.id }}" onclick="alerta_redireccion('Desea levantar el veto sobre est oferta ?', '/oferta/levantamiento_veto/{{ oferta.id }}/')">Levantar el veto sobre la oferta</button>
+                            </td>
+                        {% endif %}
+                    {% endif %}
+                </tr>
+            {% endfor %}
+        </table>
+
+    </div>
+
+{% endblock %}

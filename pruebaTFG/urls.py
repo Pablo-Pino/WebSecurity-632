@@ -16,6 +16,8 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include
 from prueba1.views.actividad_views import ListadoActividadesView, CreacionActividadesView, EdicionActividadesView, EliminacionActividadesView, DetallesActividadesView, VetoActividadesView, LevantamientoVetoActividadesView
+from prueba1.views.oferta_views import ListadoOfertaView, CreacionOfertaView, DetallesOfertaView, EdicionOfertaView, \
+    EliminacionOfertaView
 from prueba1.views.perfil_views import RegistroUsuarioView, DetallesPerfilView, EdicionPerfilView, CreacionAnexoView, EdicionAnexoView, EliminacionAnexoView
 from prueba1.views.sesionactividad_views import SesionActividadComienzo, SesionActividadFinal
 from prueba1.views.views import EjercicioMock1View, EjercicioMock2View, EjercicioMock3View
@@ -43,6 +45,11 @@ urlpatterns = [
     path('actividad/levantamiento_veto/<int:actividad_id>/', LevantamientoVetoActividadesView.as_view()),
     path('perfil/detalles/', DetallesPerfilView.as_view(), name = 'perfil_detalles'),
     path('perfil/edicion/', EdicionPerfilView.as_view(), name = 'perfil_edicion'),
+    path('oferta/listado/', ListadoOfertaView.as_view(), name='oferta_listado'),
+    path('oferta/creacion/', CreacionOfertaView.as_view(), name='oferta_creacion'),
+    path('oferta/edicion/<int:oferta_id>/', EdicionOfertaView.as_view(), name='oferta_edicion'),
+    path('oferta/detalles/<int:oferta_id>/', DetallesOfertaView.as_view(), name='oferta_detalles'),
+    path('oferta/eliminacion/<int:oferta_id>/', EliminacionOfertaView.as_view(), name='oferta_eliminacion'),
     path('anexo/creacion_edicion/', CreacionAnexoView.as_view(), name = 'anexo_creacion'),
     path('anexo/creacion_edicion/<int:anexo_id>/', EdicionAnexoView.as_view(), name = 'anexo_edicion'),
     path('anexo/eliminacion/<int:anexo_id>/', EliminacionAnexoView.as_view(), name = 'anexo_eliminacion'),
