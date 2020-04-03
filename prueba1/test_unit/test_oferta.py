@@ -29,6 +29,10 @@ class OfertaTestCase(TestCase):
     def logout(self):
         self.client.get('/logout/')
 
+
+
+    # LISTADO
+
     # Un usuario accede al listado de ofertas correctamente
     def test_lista_ofertas(self):
         # Se inicializan variables y el usuario se loguea
@@ -73,6 +77,10 @@ class OfertaTestCase(TestCase):
             # El usuario se desloguea
             self.logout()
 
+
+
+    # DETALLES
+
     # Un usuario accede a los detalles de una oferta correctamente
     def test_detalles_oferta(self):
         # Se inicializan variables y se loguea el usuario
@@ -110,6 +118,10 @@ class OfertaTestCase(TestCase):
         # El usuario se desloguea
         self.logout()
 
+
+
+    # CREACIÓN
+
     # Un usuario crea una oferta correctamente
     def test_crea_oferta(self):
         # Se inicializan variables y se loguea el usuario
@@ -119,7 +131,6 @@ class OfertaTestCase(TestCase):
         # Se sacan las variables necesarias para comparar los datos
         numero_ofertas_antes = Oferta.objects.count()
         autor_esperado = Usuario.objects.get(django_user__username = 'usuario1')
-        print('NIKO')
         # Se asignan variables para los datos de entrada
         titulo = 'test_crea'
         descripcion = 'test_crea'
@@ -133,7 +144,6 @@ class OfertaTestCase(TestCase):
             'descripcion': descripcion,
             'actividades': actividades_post
         })
-        print('NIKO')
         # Se obtienen las variables de salida
         numero_ofertas_despues = Oferta.objects.count()
         oferta_creada = Oferta.objects.all().order_by('id').last()
@@ -142,7 +152,6 @@ class OfertaTestCase(TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertRedirects(response, '/oferta/detalles/{}/'.format(oferta_creada.id))
         self.assertEqual(numero_ofertas_antes, numero_ofertas_despues - 1)
-        print('NII')
         # Se comprueba que los datos almacenados son los esperados
         self.assertEqual(oferta_creada.titulo, titulo)
         self.assertEqual(oferta_creada.descripcion, descripcion)
@@ -270,7 +279,7 @@ class OfertaTestCase(TestCase):
             'descripcion': descripcion,
             'actividades': actividades_post
         })
-        # Se obtienen las varibles de salida
+        # Se obtienen las variables de salida
         numero_ofertas_despues = Oferta.objects.count()
         # Se comparan los datos y se comprueba que no se ha creado la oferta, se debe comprobar además que se ha
         # obtenido la página sin redirección y que se ha obtenido correctamente, debido a que se permanece en el
@@ -280,30 +289,33 @@ class OfertaTestCase(TestCase):
         # Se desloguea el usuario
         self.logout()
 
-    '''
+
+
+    # EDICIÓN
     
     # Un usuario edita una oferta correctamente
     def test_edita_oferta(self):
         # Se inicializan variables y se loguea el usuario
         username = 'usuario1'
         password = 'usuario1'
-        oferta = Oferta.objects.filter(Q(autor__django_user__username = username) & Q(borrador = True)).first()
+        oferta = Oferta.objects.filter(autor__django_user__username=username, borrador=True, cerrada=False).first()
         self.login(username, password)
         # Se asignan variables para los datos de entrada
         titulo = 'test_edita'
-        enlace = 'https://testedita.com/'
         descripcion = 'test_edita'
-        comentable = True
         borrador = False
+        actividades = list(Actividad.objects.filter(borrador=False, vetada=False))[:2]
+        actividades_post = []
+        for actividad in actividades:
+            actividades_post.append(actividad.id)
         # Se realiza la petición para editar la oferta
         response = self.client.post('/oferta/edicion/{}/'.format(oferta.id), {
             'titulo': titulo, 
-            'enlace': enlace, 
-            'descripcion': descripcion, 
-            'comentable': comentable, 
+            'descripcion': descripcion,
+            'actividades': actividades_post,
             'borrador': borrador
         })
-        # Se obtienen las varibles de salida
+        # Se obtienen las variables de salida
         oferta_editada = Oferta.objects.get(pk = oferta.id)
         # Se comparan los datos, se debe comprobar que el usuario ha sido redirigido a la página de detalles de la 
         # oferta tras ser editada
@@ -312,13 +324,12 @@ class OfertaTestCase(TestCase):
         # Se comprueba que los datos almacenados son los esperados
         self.assertEqual(oferta, oferta_editada)
         self.assertEqual(oferta_editada.titulo, titulo)
-        self.assertURLEqual(oferta_editada.enlace, enlace)
         self.assertEqual(oferta_editada.descripcion, descripcion)
         self.assertEqual(oferta_editada.borrador, borrador)
-        self.assertEqual(oferta_editada.vetada, False)
-        self.assertEqual(oferta_editada.motivo_veto, None)
+        self.assertEqual(list(oferta_editada.actividades.all()), actividades)
+        self.assertFalse(oferta_editada.vetada)
+        self.assertIsNone(oferta_editada.motivo_veto)
         self.assertEqual(oferta_editada.fecha_creacion, oferta.fecha_creacion)
-        self.assertEqual(oferta_editada.comentable, comentable)
         self.assertEqual(oferta_editada.identificador, oferta.identificador)
         # El usuario se desloguea
         self.logout()
@@ -326,20 +337,21 @@ class OfertaTestCase(TestCase):
     # Un usuario edita un oferta sin estar autenticado
     def test_edita_oferta_sin_loguear(self):
         # Se inicializan variables y se loguea el usuario
-        oferta = Oferta.objects.filter(borrador = True).first()
+        oferta = Oferta.objects.filter(borrador=True, cerrada=False).first()
         # Se asignan variables para los datos de entrada
         titulo = 'test_edita_sin_loguear'
-        enlace = 'https://testeditasinloguear.com/'
         descripcion = 'test_edita_sin_loguear'
-        comentable = True
         borrador = False
+        actividades = list(Actividad.objects.filter(borrador=False, vetada=False))[:2]
+        actividades_post = []
+        for actividad in actividades:
+            actividades_post.append(actividad.id)
         # Se realiza la petición para editar la oferta
         response = self.client.post('/oferta/edicion/{}/'.format(oferta.id), {
             'titulo': titulo, 
-            'enlace': enlace, 
-            'descripcion': descripcion, 
-            'comentable': comentable, 
-            'borrador': borrador
+            'descripcion': descripcion,
+            'borrador': borrador,
+            'actividades': actividades_post
         })
         oferta_despues = Oferta.objects.get(pk = oferta.id)
         # Se comparan los datos, se debe comprobar que el usuario ha sido redirigido a la página de login, puesto a que 
@@ -349,9 +361,8 @@ class OfertaTestCase(TestCase):
         # Se comprueba que no se ha editado ninguno de los campos editables
         self.assertEqual(oferta_despues.titulo, oferta.titulo)
         self.assertEqual(oferta_despues.descripcion, oferta.descripcion)
-        self.assertURLEqual(oferta_despues.enlace, oferta.enlace)
         self.assertEqual(oferta_despues.borrador, oferta.borrador)
-        self.assertEqual(oferta_despues.comentable, oferta.comentable)
+        self.assertEqual(oferta_despues.actividades, oferta.actividades)
         # El usuario se desloguea
         self.logout()
 
@@ -360,21 +371,22 @@ class OfertaTestCase(TestCase):
         # Se inicializan variables y se loguea el usuario
         username = 'usuario2'
         password = 'usuario2'
-        oferta = Oferta.objects.filter(borrador = True).exclude(autor__django_user__username = username).first()
+        oferta = Oferta.objects.filter(borrador=True, cerrada=False).exclude(autor__django_user__username=username).first()
         self.login(username, password)
         # Se asignan variables para los datos de entrada
         titulo = 'test_edita_incorrecto'
-        enlace = 'https://testeditaincorrecto.com/'
         descripcion = 'test_edita_incorrecto'
-        comentable = True
         borrador = False
+        actividades = list(Actividad.objects.filter(borrador=False, vetada=False))[:2]
+        actividades_post = []
+        for actividad in actividades:
+            actividades_post.append(actividad.id)
         # Se realiza la petición para editar la oferta
         response = self.client.post('/oferta/edicion/{}/'.format(oferta.id), {
             'titulo': titulo, 
-            'enlace': enlace, 
-            'descripcion': descripcion, 
-            'comentable': comentable, 
-            'borrador': borrador
+            'descripcion': descripcion,
+            'borrador': borrador,
+            'actividades' : actividades_post
         })
         oferta_despues = Oferta.objects.get(pk = oferta.id)
         # Se comparan los datos y se comprueba que el usuario ha sido redirigido a la página de detalles de la 
@@ -384,9 +396,8 @@ class OfertaTestCase(TestCase):
         # Se comprueba que no se ha editado ninguno de los campos editables
         self.assertEqual(oferta_despues.titulo, oferta.titulo)
         self.assertEqual(oferta_despues.descripcion, oferta.descripcion)
-        self.assertURLEqual(oferta_despues.enlace, oferta.enlace)
         self.assertEqual(oferta_despues.borrador, oferta.borrador)
-        self.assertEqual(oferta_despues.comentable, oferta.comentable)
+        self.assertEqual(oferta_despues.actividades, oferta.actividades)
         # El usuario se desloguea
         self.logout()
 
@@ -395,20 +406,21 @@ class OfertaTestCase(TestCase):
         # Se inicializan variables y se loguea el usuario
         username = 'usuario1'
         password = 'usuario1'
-        oferta = Oferta.objects.filter(Q(borrador = False) & Q(autor__django_user__username = username)).first()
+        oferta = Oferta.objects.filter(borrador=False, autor__django_user__username=username, cerrada=False).first()
         self.login(username, password)
         # Se asignan variables para los datos de entrada
         titulo = 'test_edita_incorrecto'
-        enlace = 'https://testeditaincorrecto.com/'
         descripcion = 'test_edita_incorrecto'
-        comentable = True
         borrador = False
+        actividades = list(Actividad.objects.filter(borrador=False, vetada=False))[:2]
+        actividades_post = []
+        for actividad in actividades:
+            actividades_post.append(actividad.id)
         # Se realiza la petición para editar la oferta
         response = self.client.post('/oferta/edicion/{}/'.format(oferta.id), {
             'titulo': titulo, 
-            'enlace': enlace, 
-            'descripcion': descripcion, 
-            'comentable': comentable, 
+            'descripcion': descripcion,
+            'actividades' : actividades_post,
             'borrador': borrador
         })
         oferta_despues = Oferta.objects.get(pk = oferta.id)
@@ -419,9 +431,43 @@ class OfertaTestCase(TestCase):
         # Se comprueba que no se ha editado nada
         self.assertEqual(oferta_despues.titulo, oferta.titulo)
         self.assertEqual(oferta_despues.descripcion, oferta.descripcion)
-        self.assertURLEqual(oferta_despues.enlace, oferta.enlace)
         self.assertEqual(oferta_despues.borrador, oferta.borrador)
-        self.assertEqual(oferta_despues.comentable, oferta.comentable)
+        self.assertEqual(oferta_despues.actividades, oferta.actividades)
+        # El usuario se desloguea
+        self.logout()
+
+    # Un usuario edita una oferta que está cerrada
+    def test_edita_oferta_no_borrador(self):
+        # Se inicializan variables y se loguea el usuario
+        username = 'usuario1'
+        password = 'usuario1'
+        oferta = Oferta.objects.filter(autor__django_user__username=username, cerrada=True).first()
+        self.login(username, password)
+        # Se asignan variables para los datos de entrada
+        titulo = 'test_edita_incorrecto'
+        descripcion = 'test_edita_incorrecto'
+        borrador = False
+        actividades = list(Actividad.objects.filter(borrador=False, vetada=False))[:2]
+        actividades_post = []
+        for actividad in actividades:
+            actividades_post.append(actividad.id)
+        # Se realiza la petición para editar la oferta
+        response = self.client.post('/oferta/edicion/{}/'.format(oferta.id), {
+            'titulo': titulo,
+            'descripcion': descripcion,
+            'actividades': actividades_post,
+            'borrador': borrador
+        })
+        oferta_despues = Oferta.objects.get(pk=oferta.id)
+        # Se comparan los datos y se comprueba que el usuario ha sido redirigido a la página de detalles de la
+        # oferta. Esto se debe a que no puede editar una oferta que está cerrada.
+        self.assertEqual(response.status_code, 302)
+        self.assertRedirects(response, '/oferta/detalles/{}/'.format(oferta.id))
+        # Se comprueba que no se ha editado nada
+        self.assertEqual(oferta_despues.titulo, oferta.titulo)
+        self.assertEqual(oferta_despues.descripcion, oferta.descripcion)
+        self.assertEqual(oferta_despues.borrador, oferta.borrador)
+        self.assertEqual(oferta_despues.actividades, oferta.actividades)
         # El usuario se desloguea
         self.logout()
 
@@ -430,21 +476,20 @@ class OfertaTestCase(TestCase):
         # Se inicializan variables y se loguea el usuario
         username = 'usuario1'
         password = 'usuario1'
-        oferta = Oferta.objects.filter(Q(borrador = True) & Q(autor__django_user__username = username)).first()
+        oferta = Oferta.objects.filter(borrador=True, autor__django_user__username=username, cerrada=False).first()
         self.login(username, password)
         # Se asignan variables para los datos de entrada
-        titulo = 'test_edita_incorrecta'
-        enlace = 'https://testedita_incorrecta.com/'
         descripcion = 'test_edita_incorrecta'
-        comentable = True
         borrador = False
+        actividades = list(Actividad.objects.filter(borrador=False, vetada=False))[:2]
+        actividades_post = []
+        for actividad in actividades:
+            actividades_post.append(actividad.id)
         # Se realiza la petición para editar la oferta
         response = self.client.post('/oferta/edicion/{}/'.format(oferta.id), {
-            'titulo': titulo, 
-            'enlace': enlace, 
-            'descripcion': descripcion, 
-            'comentable': comentable, 
-            'borrador': borrador
+            'descripcion': descripcion,
+            'borrador': borrador,
+            'actividades': actividades_post
         })
         oferta_despues = Oferta.objects.get(pk = oferta.id)
         # Se comparan los datos. Se comprueba que no ha sucedido ninguna redirección y que la página se ha obtenido
@@ -453,18 +498,95 @@ class OfertaTestCase(TestCase):
         # Se comprueba que no se ha editado nada
         self.assertEqual(oferta_despues.titulo, oferta.titulo)
         self.assertEqual(oferta_despues.descripcion, oferta.descripcion)
-        self.assertURLEqual(oferta_despues.enlace, oferta.enlace)
         self.assertEqual(oferta_despues.borrador, oferta.borrador)
-        self.assertEqual(oferta_despues.comentable, oferta.comentable)
+        self.assertEqual(oferta_despues.actividades, oferta.actividades)
         # El usuario se desloguea
         self.logout()
+
+    # Un usuario edita una oferta insertando actividades vetadas
+    def test_edita_oferta_actividad_vetada(self):
+        # Se inicializan variables y se loguea el usuario
+        username = 'usuario1'
+        password = 'usuario1'
+        oferta = Oferta.objects.filter(autor__django_user__username=username, cerrada=False, borrador=True).first()
+        self.login(username, password)
+        # Se asignan variables para los datos de entrada
+        titulo = 'test_edita_incorrecto'
+        descripcion = 'test_edita_incorrecto'
+        borrador = False
+        actividades = list(Actividad.objects.filter(borrador=False, vetada=False))[:2]
+        actividades_post = []
+        for actividad in actividades:
+            actividades_post.append(actividad.id)
+        actividad_vetada = Actividad.objects.filter(borrador=False, vetada=True)
+        actividades_post.append(actividad_vetada)
+        # Se realiza la petición para editar la oferta
+        response = self.client.post('/oferta/edicion/{}/'.format(oferta.id), {
+            'titulo': titulo,
+            'descripcion': descripcion,
+            'actividades': actividades_post,
+            'borrador': borrador
+        })
+        oferta_despues = Oferta.objects.get(pk=oferta.id)
+        # Se comparan los datos y se comprueba que el usuario ha sido redirigido a la página de detalles de la
+        # oferta. Esto se debe a que no puede editar una oferta que está cerrada.
+        self.assertEqual(response.status_code, 200)
+        # self.assertRedirects(response, '/oferta/detalles/{}/'.format(oferta.id))
+        # Se comprueba que no se ha editado nada
+        self.assertEqual(oferta_despues.titulo, oferta.titulo)
+        self.assertEqual(oferta_despues.descripcion, oferta.descripcion)
+        self.assertEqual(oferta_despues.borrador, oferta.borrador)
+        self.assertEqual(oferta_despues.actividades, oferta.actividades)
+        # El usuario se desloguea
+        self.logout()
+
+    # Un usuario edita una oferta insertando actividades en modo borrador
+    def test_edita_oferta_actividad_borrador(self):
+        # Se inicializan variables y se loguea el usuario
+        username = 'usuario1'
+        password = 'usuario1'
+        oferta = Oferta.objects.filter(autor__django_user__username=username, cerrada=False, borrador=True).first()
+        self.login(username, password)
+        # Se asignan variables para los datos de entrada
+        titulo = 'test_edita_incorrecto'
+        descripcion = 'test_edita_incorrecto'
+        borrador = False
+        actividades = list(Actividad.objects.filter(borrador=False, vetada=False))[:2]
+        actividades_post = []
+        for actividad in actividades:
+            actividades_post.append(actividad.id)
+        actividad_borrador = Actividad.objects.filter(borrador=True, vetada=False)
+        actividades_post.append(actividad_borrador)
+        # Se realiza la petición para editar la oferta
+        response = self.client.post('/oferta/edicion/{}/'.format(oferta.id), {
+            'titulo': titulo,
+            'descripcion': descripcion,
+            'actividades': actividades_post,
+            'borrador': borrador
+        })
+        oferta_despues = Oferta.objects.get(pk=oferta.id)
+        # Se comparan los datos y se comprueba que el usuario ha sido redirigido a la página de detalles de la
+        # oferta. Esto se debe a que no puede editar una oferta que está cerrada.
+        self.assertEqual(response.status_code, 200)
+        # self.assertRedirects(response, '/oferta/detalles/{}/'.format(oferta.id))
+        # Se comprueba que no se ha editado nada
+        self.assertEqual(oferta_despues.titulo, oferta.titulo)
+        self.assertEqual(oferta_despues.descripcion, oferta.descripcion)
+        self.assertEqual(oferta_despues.borrador, oferta.borrador)
+        self.assertEqual(oferta_despues.actividades, oferta.actividades)
+        # El usuario se desloguea
+        self.logout()
+
+
+
+    # ELIMINACIÓN
 
     # Un usuario elimina una oferta correctamente
     def test_elimina_oferta(self):
         # Se inicializan variables y se loguea el usuario
         username = 'usuario1'
         password = 'usuario1'
-        oferta = Oferta.objects.filter(Q(autor__django_user__username = username) & Q(borrador = True)).first()
+        oferta = Oferta.objects.filter(autor__django_user__username=username, borrador=True, cerrada=False).first()
         numero_ofertas_antes = Oferta.objects.count()
         self.login(username, password)
         # Se realiza la petición para eliminar la oferta
@@ -490,7 +612,7 @@ class OfertaTestCase(TestCase):
     # Un usuario elimina una oferta sin estar autenticado
     def test_elimina_oferta_sin_loguear(self):
         # Se inicializan variables
-        oferta = Oferta.objects.filter(borrador = True).first()
+        oferta = Oferta.objects.filter(borrador=True, cerrada=False).first()
         numero_ofertas_antes = Oferta.objects.count()
         # Se realiza la petición para eliminar la oferta
         response = self.client.get('/oferta/eliminacion/{}/'.format(oferta.id))
@@ -516,7 +638,7 @@ class OfertaTestCase(TestCase):
         # Se inicializan variables y se loguea el usuario
         username = 'usuario2'
         password = 'usuario2'
-        oferta = Oferta.objects.exclude(autor__django_user__username = username).filter(borrador = True).first()
+        oferta = Oferta.objects.exclude(autor__django_user__username=username).filter(borrador=True, cerrada=False).first()
         numero_ofertas_antes = Oferta.objects.count()
         self.login(username, password)
         # Se realiza la petición para eliminar la oferta
@@ -544,7 +666,7 @@ class OfertaTestCase(TestCase):
         # Se inicializan variables y se loguea el usuario
         username = 'usuario1'
         password = 'usuario1'
-        oferta = Oferta.objects.filter(Q(autor__django_user__username = username) & Q(borrador = False)).first()
+        oferta = Oferta.objects.filter(autor__django_user__username=username, borrador=False, cerrada=False).first()
         numero_ofertas_antes = Oferta.objects.count()
         self.login(username, password)
         # Se realiza la petición para crear la oferta
@@ -565,6 +687,8 @@ class OfertaTestCase(TestCase):
         self.assertEqual(oferta_eliminada, False)
         # El usuario se desloguea
         self.logout()
+
+    '''
     
     # Un administrador veta una oferta
     def test_veta_oferta(self):

@@ -23,4 +23,4 @@ class Oferta(models.Model):
         super().clean()
         # No puede haber una oferta vetada sin motivo de veto
         if self.vetada and not self.motivo_veto:
-            raise ValidationError('No puede haber una actividad vetada sin motivo de veto')
+            raise ValidationError('No puede haber una oferta vetada sin motivo de veto')
