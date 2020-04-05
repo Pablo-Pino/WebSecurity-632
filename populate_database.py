@@ -312,8 +312,7 @@ oferta_4 = Oferta(
 
 oferta_5 = Oferta(
     titulo = 'Java de instituto',
-    descripcion = '''Se ofrece un puesto de profesor de Informática para alumnos de Bachillerato. 
-            Se piden conocimientos básicos de Java y capacidad para la enseñanza''',
+    descripcion = '''Se ofrece un puesto de profesor de Informática para alumnos de Bachillerato. Se piden conocimientos básicos de Java y capacidad para la enseñanza''',
     autor = usuario_3,
     borrador = False,
     vetada = False,
@@ -349,21 +348,19 @@ oferta_7 = Oferta(
 
 oferta_8 = Oferta(
     titulo = 'Experto en API REST',
-    descripcion = '''Se buscan ingenieros con competencias en el diseño de API REST. Se requiere conocimientos de 
-            PHP''',
+    descripcion = '''Se buscan ingenieros con competencias en el diseño de API REST. Se requiere conocimientos de PHP''',
     autor = usuario_1,
     borrador = True,
     vetada = False,
     fecha_creacion = date(2019, 12, 3),
     identificador = 'OFR-ASDFGCLOB0',
-    cerrada = True,
+    cerrada = False,
     motivo_veto = None,
 )
 
 oferta_9 = Oferta(
     titulo = 'Big Data en Madrid',
-    descripcion = '''Si te interesa la oferta, puedes contactar con nosotros en datosgrandes.es. Puedes encontrar 
-            nuestras oficinas en la C/Toronto nº 43 en Madrid o Avd de los Reyes en Barcelona nº 2.''',
+    descripcion = '''Si te interesa la oferta, puedes contactar con nosotros en datosgrandes.es. Puedes encontrar nuestras oficinas en la C/Toronto nº 43 en Madrid o Avd de los Reyes en Barcelona nº 2.''',
     autor = usuario_1,
     borrador = False,
     vetada = False,

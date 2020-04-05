@@ -6,7 +6,7 @@ from django.db.models import Q
 from django.core.exceptions import ObjectDoesNotExist
 from selenium.webdriver import FirefoxProfile
 
-from selenium.webdriver.chrome.webdriver import WebDriver
+from selenium.webdriver.firefox.webdriver import WebDriver
 from selenium import webdriver
 from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.common.keys import Keys
@@ -89,75 +89,75 @@ class ActividadTestCase(StaticLiveServerTestCase):
     def evaluar_columnas_listado_actividades(self, actividades_esperadas, usuario):
         i = 2
         # Por cada una de las actividades que debe aparecer
-        for a in actividades_esperadas:
+        for actividad in actividades_esperadas:
             # Se comprueba el título
             titulo = self.selenium.find_element_by_xpath('//tbody/child::tr[{}]/child::td[1]'.format(i)).text
-            self.assertEqual(titulo, a.titulo)
+            self.assertEqual(titulo, actividad.titulo)
             # Se comprueba las descripción
             descripcion = self.selenium.find_element_by_xpath('//tbody/child::tr[{}]/child::td[2]'.format(i)).text
-            self.assertEqual(descripcion, a.descripcion)
+            self.assertEqual(descripcion, actividad.descripcion)
             # Se comprueba la fecha de creación
             fecha_creacion = self.selenium.find_element_by_xpath('//tbody/child::tr[{}]/child::td[3]'.format(i)).text
-            self.assertEqual(fecha_creacion, a.fecha_creacion.strftime('%d/%m/%Y'))
+            self.assertEqual(fecha_creacion, actividad.fecha_creacion.strftime('%d/%m/%Y'))
             # Se comprueba el autor
             autor = self.selenium.find_element_by_xpath('//tbody/child::tr[{}]/child::td[4]'.format(i)).text
-            self.assertEqual(autor, '{} {}'.format(a.autor.django_user.first_name, a.autor.django_user.last_name))
+            self.assertEqual(autor, '{} {}'.format(actividad.autor.django_user.first_name, actividad.autor.django_user.last_name))
             # Se comprueba que está el botón de detalles
             boton_detalles = self.selenium.find_element_by_xpath('//tbody/child::tr[{}]/child::td[5]/child::button'.format(i))
-            self.assertEqual(boton_detalles.get_attribute('onclick'), 'window.location.href = \'/actividad/detalles/{}/\''.format(a.id))
+            self.assertEqual(boton_detalles.get_attribute('onclick'), 'window.location.href = \'/actividad/detalles/{}/\''.format(actividad.id))
             j = 6
             # Se comprueba que esté el botón de editar si procede
             try:
                 boton_editar = self.selenium.find_element_by_xpath('//tbody/child::tr[{}]/child::td[{}]/child::button'.format(i, j))
-                if usuario == a.autor and a.borrador:
-                    self.assertEqual(boton_editar.get_attribute('onclick'), 'window.location.href = \'/actividad/edicion/{}/\''.format(a.id))
+                if usuario == actividad.autor and actividad.borrador:
+                    self.assertEqual(boton_editar.get_attribute('onclick'), 'window.location.href = \'/actividad/edicion/{}/\''.format(actividad.id))
                     boton_editar = True
                     j = j + 1
                 else:
-                    self.assertEqual(boton_editar.get_attribute('onclick') == 'window.location.href = \'/actividad/edicion/{}/\''.format(a.id), False)
+                    self.assertEqual(boton_editar.get_attribute('onclick') == 'window.location.href = \'/actividad/edicion/{}/\''.format(actividad.id), False)
                     boton_editar = False
             except NoSuchElementException:
                 boton_editar = False
-            self.assertEqual(usuario == a.autor and a.borrador, boton_editar)
+            self.assertEqual(usuario == actividad.autor and actividad.borrador, boton_editar)
             # Se comprueba que está el botón de eliminar si procede
             try:
                 boton_eliminar = self.selenium.find_element_by_xpath('//tbody/child::tr[{}]/child::td[{}]/child::button'.format(i, j))
-                if usuario == a.autor and a.borrador:
-                    self.assertEqual(boton_eliminar.get_attribute('onclick'), 'alerta_redireccion(\'Desea eliminar esta actividad ?\', \'/actividad/eliminacion/{}/\')'.format(a.id))
+                if usuario == actividad.autor and actividad.borrador:
+                    self.assertEqual(boton_eliminar.get_attribute('onclick'), 'alerta_redireccion(\'Desea eliminar esta actividad ?\', \'/actividad/eliminacion/{}/\')'.format(actividad.id))
                     boton_eliminar = True
                     j = j + 1
                 else:
-                    self.assertEqual(boton_eliminar.get_attribute('onclick') == 'alerta_redireccion(\'Desea eliminar esta actividad ?\', \'/actividad/eliminacion/{}/\')'.format(a.id), False)
+                    self.assertEqual(boton_eliminar.get_attribute('onclick') == 'alerta_redireccion(\'Desea eliminar esta actividad ?\', \'/actividad/eliminacion/{}/\')'.format(actividad.id), False)
                     boton_eliminar = False
             except NoSuchElementException:
                 boton_eliminar = False
-            self.assertEqual(usuario == a.autor and a.borrador, boton_eliminar)
+            self.assertEqual(usuario == actividad.autor and actividad.borrador, boton_eliminar)
             # Se comprueba que está el botón de vetar si procede
             try:
                 boton_veto = self.selenium.find_element_by_xpath('//tbody/child::tr[{}]/child::td[{}]/child::button'.format(i, j))
-                if usuario.es_admin and not a.borrador and not a.vetada:
-                    self.assertEqual(boton_veto.get_attribute('onclick'), 'window.location.href = \'/actividad/veto/{}/\''.format(a.id))
+                if usuario.es_admin and not actividad.borrador and not actividad.vetada:
+                    self.assertEqual(boton_veto.get_attribute('onclick'), 'window.location.href = \'/actividad/veto/{}/\''.format(actividad.id))
                     boton_veto = True
                     j = j + 1
                 else:
-                    self.assertEqual(boton_veto.get_attribute('onclick') == 'window.location.href = \'/actividad/veto/{}/\''.format(a.id), False)
+                    self.assertEqual(boton_veto.get_attribute('onclick') == 'window.location.href = \'/actividad/veto/{}/\''.format(actividad.id), False)
                     boton_veto = False
             except NoSuchElementException:
                 boton_veto = False
-            self.assertEqual(usuario.es_admin and not a.borrador and not a.vetada, boton_veto)
+            self.assertEqual(usuario.es_admin and not actividad.borrador and not actividad.vetada, boton_veto)
             # Se comprueba que está el botón de levantar veto si procede
             try:
                 boton_levanta_veto = self.selenium.find_element_by_xpath('//tbody/child::tr[{}]/child::td[{}]/child::button'.format(i, j))
-                if usuario.es_admin and not a.borrador and a.vetada:
-                    self.assertEqual(boton_levanta_veto.get_attribute('id'), 'button_levantar_veto_{}'.format(a.id))
+                if usuario.es_admin and not actividad.borrador and actividad.vetada:
+                    self.assertEqual(boton_levanta_veto.get_attribute('id'), 'button_levantar_veto_{}'.format(actividad.id))
                     boton_levanta_veto = True
                     j = j + 1
                 else:
-                    self.assertEqual(boton_levanta_veto.get_attribute('id'), 'button_levantar_veto_{}'.format(a.id), False)
+                    self.assertEqual(boton_levanta_veto.get_attribute('id'), 'button_levantar_veto_{}'.format(actividad.id), False)
                     boton_levanta_veto = False
             except NoSuchElementException:
                 boton_levanta_veto = False
-            self.assertEqual(usuario.es_admin and not a.borrador and a.vetada, boton_levanta_veto)
+            self.assertEqual(usuario.es_admin and not actividad.borrador and actividad.vetada, boton_levanta_veto)
             i = i + 1
 
 
@@ -426,8 +426,8 @@ class ActividadTestCase(StaticLiveServerTestCase):
         error_titulo = self.selenium.find_element_by_xpath('//input[@id="id_titulo"]/following::div[@class="invalid-feedback"][1]')
         error_descripcion = self.selenium.find_element_by_xpath('//input[@id="id_descripcion"]/following::div[@class="invalid-feedback"][1]')
         error_enlace = self.selenium.find_element_by_xpath('//input[@id="id_enlace"]/following::div[@class="invalid-feedback"][1]')
-        self.assertEqual(error_titulo.text, 'Este campo es obligatorio.')
-        self.assertEqual(error_descripcion.text, 'Este campo es obligatorio.')
+        self.assertEqual(error_titulo.text, 'Este campo es requerido.')
+        self.assertEqual(error_descripcion.text, 'Este campo es requerido.')
         self.assertEqual(error_enlace.text, 'Introduzca una URL válida.')
         # El usuario se desloguea
         self.logout()
@@ -507,9 +507,9 @@ class ActividadTestCase(StaticLiveServerTestCase):
         error_titulo = self.selenium.find_element_by_xpath('//input[@id="id_titulo"]/following::div[@class="invalid-feedback"][1]')
         error_descripcion = self.selenium.find_element_by_xpath('//input[@id="id_descripcion"]/following::div[@class="invalid-feedback"][1]')
         error_enlace = self.selenium.find_element_by_xpath('//input[@id="id_enlace"]/following::div[@class="invalid-feedback"][1]')
-        self.assertEqual(error_titulo.text, 'Este campo es obligatorio.')
-        self.assertEqual(error_descripcion.text, 'Este campo es obligatorio.')
-        self.assertEqual(error_enlace.text, 'Este campo es obligatorio.')
+        self.assertEqual(error_titulo.text, 'Este campo es requerido.')
+        self.assertEqual(error_descripcion.text, 'Este campo es requerido.')
+        self.assertEqual(error_enlace.text, 'Este campo es requerido.')
         # El usuario se desloguea
         self.logout()
 
@@ -593,8 +593,6 @@ class ActividadTestCase(StaticLiveServerTestCase):
         # El usuario se desloguea
         self.logout()     
 
-    # Un usuario va a eliminar una actividad pero no acepta la eliminación
-
     # Un usuario elimina una actividad, pero cancela la eliminación
     def test_eliminar_actividad_sin_aceptar(self):
         # El usuario se loguea
@@ -626,8 +624,6 @@ class ActividadTestCase(StaticLiveServerTestCase):
         self.assertEqual(len(actividades_listado_antes), len(actividades_listado_despues))
         # El usuario se desloguea
         self.logout() 
-
-    # Un usuario va a eliminar una actividad sin autenticarse
 
     # Un usuario elimina una actividad sin estar autenticado
     def test_eliminar_actividad_sin_autenticar(self):
@@ -823,7 +819,7 @@ class ActividadTestCase(StaticLiveServerTestCase):
         self.selenium.switch_to.alert.accept()
         # Se busca el mensaje de error de validación y se comprueba que es correcto
         motivo_error_veto = self.selenium.find_element_by_xpath('//form/child::input[@id="id_motivo_veto"]/following-sibling::div[@class="invalid-feedback"][1]')
-        self.assertEqual(motivo_error_veto.text, 'Este campo es obligatorio.')
+        self.assertEqual(motivo_error_veto.text, 'Este campo es requerido.')
         # Se comprueba que se está en la página de veto de la actividad
         self.assertEqual('{}/actividad/veto/{}/'.format(self.live_server_url, actividad.id), self.selenium.current_url)
         # Se busca el mensaje de fallo y se comprueba que es correcto

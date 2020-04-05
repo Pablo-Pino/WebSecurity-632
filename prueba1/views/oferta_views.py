@@ -347,17 +347,14 @@ class LevantamientoVetoOfertaView(UserPassesTestMixin, View):
 
     def get(self, request, oferta_id):
         context = {}
-        print('minga dominga')
         # Se comprueba que se puede levantar el veto sobre la oferta
         res = comprueba_levantar_veto_oferta(request, oferta_id)
-        print('pringles')
         # Si el resultado es una oferta, entonces se almacena en la variable correspondiente
         if isinstance(res, Oferta):
             oferta = res
         # Si el resultado es una redirección, entonces se aplica la redirección
         elif isinstance(res, HttpResponseRedirect):
             return res
-        print('ok google')
         # Se intenta levantar el veto sobre la oferta
         try:
             levanta_veto_oferta(request, oferta)

@@ -31,7 +31,7 @@
                                 <button id="button_eliminar_{{ oferta.id }}" onclick="alerta_redireccion('Desea eliminar esta oferta ?', '/oferta/eliminacion/{{ oferta.id }}/')">Eliminar oferta</button>
                             </td>
                         {% endif %}
-                        {% if not oferta.borrador and oferta.autor == usuario %}
+                        {% if oferta.autor == usuario and not oferta.borrador and not oferta.vetada %}
                             <td>
                                 <button id="button_cerrar_{{ oferta.id }}" onclick="alerta_redireccion('Desea cerrar esta oferta ?', '/oferta/cierre/{{ oferta.id }}/')">Cerrar oferta</button>
                             </td>

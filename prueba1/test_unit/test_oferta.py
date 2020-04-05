@@ -437,7 +437,7 @@ class OfertaTestCase(TestCase):
         self.logout()
 
     # Un usuario edita una oferta que está cerrada
-    def test_edita_oferta_no_borrador(self):
+    def test_edita_oferta_cerrada(self):
         # Se inicializan variables y se loguea el usuario
         username = 'usuario1'
         password = 'usuario1'
@@ -688,14 +688,16 @@ class OfertaTestCase(TestCase):
         # El usuario se desloguea
         self.logout()
 
-    '''
-    
+
+
+    # VETO
+
     # Un administrador veta una oferta
     def test_veta_oferta(self):
         # Se inicializan variables y se loguea el usuario
         username = 'usuario2'
         password = 'usuario2'
-        oferta = Oferta.objects.filter(Q(vetada = False) & Q(borrador = False)).first()
+        oferta = Oferta.objects.filter(vetada=False, borrador=False, cerrada=False).first()
         motivo_veto = 'Testing'
         self.login(username, password)
         # Se realiza la petición para vetar la oferta
@@ -714,7 +716,7 @@ class OfertaTestCase(TestCase):
     # Un usuario no autenticado veta una oferta
     def test_veta_oferta_sin_loguear(self):
         # Se inicializan variables y se loguea el usuario        
-        oferta = Oferta.objects.filter(Q(vetada = False) & Q(borrador = False)).first()
+        oferta = Oferta.objects.filter(vetada=False, cerrada=False, borrador = False).first()
         motivo_veto = 'Testing'
         # Se realiza la petición para vetar la oferta
         response = self.client.post('/oferta/veto/{}/'.format(oferta.id), {'motivo_veto': motivo_veto})
@@ -735,7 +737,7 @@ class OfertaTestCase(TestCase):
         # Se inicializan variables y se loguea el usuario
         username = 'usuario1'
         password = 'usuario1'
-        oferta = Oferta.objects.filter(Q(vetada = False) & Q(borrador = False)).first()
+        oferta = Oferta.objects.filter(vetada=False, borrador=False, cerrada=False).first()
         motivo_veto = 'Testing'
         self.login(username, password)
         # Se realiza la petición para vetar la oferta
@@ -755,7 +757,7 @@ class OfertaTestCase(TestCase):
         # Se inicializan variables y se loguea el usuario
         username = 'usuario2'
         password = 'usuario2'
-        oferta = Oferta.objects.filter(Q(vetada = True) & Q(borrador = False)).first()
+        oferta = Oferta.objects.filter(Q(vetada=True, cerrada=False, borrador=False)).first()
         motivo_veto = oferta.motivo_veto + 'Testing'
         self.login(username, password)
         # Se realiza la petición para vetar la oferta
@@ -771,7 +773,27 @@ class OfertaTestCase(TestCase):
         # El usuario se desloguea
         self.logout()
 
-    # Un administrador veta una oferta que ya existe
+    # Un administrador veta una oferta cerrada
+    def test_veta_oferta_cerrada(self):
+        # Se inicializan variables y se loguea el usuario
+        username = 'usuario2'
+        password = 'usuario2'
+        oferta = Oferta.objects.filter(vetada=False, cerrada=True, borrador=False).first()
+        self.login(username, password)
+        # Se realiza la petición para vetar la oferta
+        response = self.client.post('/oferta/veto/{}/'.format(oferta.id), {'motivo_veto': 'Perejil'})
+        # Se obtienen las variables de salida
+        oferta_despues = Oferta.objects.get(pk=oferta.id)
+        # Se comparan los datos. Se comprueba que la oferta no ha sufrido cambios y que el usuario ha sido redirigido
+        # a los detalles de la oferta debido a que no se puede vetar una oferta cerrada.
+        self.assertEqual(response.status_code, 302)
+        self.assertRedirects(response, '/oferta/detalles/{}/'.format(oferta.id))
+        self.assertEqual(oferta_despues.vetada, False)
+        self.assertEqual(oferta_despues.motivo_veto, oferta.motivo_veto)
+        # El usuario se desloguea
+        self.logout()
+
+    # Un administrador veta una oferta que no existe
     def test_veta_oferta_inexistente(self):
         # Se inicializan variables y se loguea el usuario
         username = 'usuario2'
@@ -793,7 +815,7 @@ class OfertaTestCase(TestCase):
         username = 'usuario2'
         password = 'usuario2'
         motivo_veto = 'Testing'
-        oferta = Oferta.objects.filter(Q(vetada = False) & Q(borrador = False)).first()
+        oferta = Oferta.objects.filter(vetada=False, cerrada=False, borrador=False).first()
         self.login(username, password)
         # Se realiza la petición para vetar la oferta
         response = self.client.post('/oferta/veto/{}/'.format(oferta.id))
@@ -813,7 +835,7 @@ class OfertaTestCase(TestCase):
         username = 'usuario2'
         password = 'usuario2'
         motivo_veto = 'Testing'
-        oferta = Oferta.objects.filter(Q(vetada = False) & Q(borrador = True)).first()
+        oferta = Oferta.objects.filter(vetada=False, borrador=True, cerrada=False).first()
         self.login(username, password)
         # Se realiza la petición para vetar la oferta
         response = self.client.post('/oferta/veto/{}/'.format(oferta.id), {'motivo_veto': motivo_veto})
@@ -833,7 +855,7 @@ class OfertaTestCase(TestCase):
         # Se inicializan variables y se loguea el usuario
         username = 'usuario2'
         password = 'usuario2'
-        oferta = Oferta.objects.filter(Q(vetada = True) & Q(borrador = False)).first()
+        oferta = Oferta.objects.filter(vetada=True, cerrada=False, borrador=False).first()
         self.login(username, password)
         # Se realiza la petición para levantar el veto sobre la oferta
         response = self.client.get('/oferta/levantamiento_veto/{}/'.format(oferta.id))
@@ -851,7 +873,7 @@ class OfertaTestCase(TestCase):
     # Un usuario levanta el veto sobre una oferta sin estar logueado
     def test_levanta_veto_oferta_sin_loguear(self):
         # Se inicializan variables y se loguea el usuario        
-        oferta = Oferta.objects.filter(Q(vetada = True) & Q(borrador = False)).first()
+        oferta = Oferta.objects.filter(vetada=True, cerrada=False, borrador = False).first()
         # Se realiza la petición para levantar el veto sobre la oferta
         response = self.client.get('/oferta/levantamiento_veto/{}/'.format(oferta.id))
         # Se obtienen las variables de salida
@@ -870,7 +892,7 @@ class OfertaTestCase(TestCase):
         # Se inicializan variables y se loguea el usuario
         username = 'usuario1'
         password = 'usuario1'
-        oferta = Oferta.objects.filter(Q(vetada = True) & Q(borrador = False)).first()
+        oferta = Oferta.objects.filter(vetada=True, cerrada=False, borrador=False).first()
         self.login(username, password)
         # Se realiza la petición para levantar el veto sobre la oferta
         response = self.client.get('/oferta/levantamiento_veto/{}/'.format(oferta.id))
@@ -889,7 +911,7 @@ class OfertaTestCase(TestCase):
         # Se inicializan variables y se loguea el usuario
         username = 'usuario2'
         password = 'usuario2'
-        oferta = Oferta.objects.filter(Q(vetada = False) & Q(borrador = False)).first()
+        oferta = Oferta.objects.filter(Q(vetada=False, cerrada=False ,borrador=False)).first()
         self.login(username, password)
         # Se realiza la petición para levantar el veto sobre la oferta
         response = self.client.get('/oferta/levantamiento_veto/{}/'.format(oferta.id))
@@ -918,25 +940,129 @@ class OfertaTestCase(TestCase):
         self.assertRedirects(response, '/oferta/listado/')
         # El usuario se desloguea
         self.logout()
-    
-    # Un usuario levanta el veto sobre una oferta en modo borrador
-    def test_levanta_veto_oferta_borrador(self):
+
+
+
+    # CIERRE
+
+    # Un usuario trata de cerrar una oferta con éxito
+    def test_cierra_oferta(self):
         # Se inicializan variables y se loguea el usuario
-        username = 'usuario2'
-        password = 'usuario2'
-        oferta = Oferta.objects.filter(Q(vetada = True) & Q(borrador = True)).first()
-        self.login(username, password)
-        # Se realiza la petición para levantar el veto sobre la oferta
-        response = self.client.get('/oferta/levantamiento_veto/{}/'.format(oferta.id))
-        # Se obtienen las variables de salida
-        oferta_despues = Oferta.objects.get(pk = oferta.id)
-        # Se comparan los datos. Se comprueba que la oferta no ha sufrido cambios y que el usuario ha sido redirigido
-        # a los detalles de la oferta puesto a que no se puede levantar el veto sobre una oferta en modo borrador.
+        username = 'usuario1'
+        password = 'usuario1'
+        usuario = self.login(username, password)
+        # Se busca una oferta para cerrarla
+        oferta = Oferta.objects.filter(autor=usuario, cerrada=False, borrador=False, vetada=False).first()
+        # Se realiza la petición para cerrar la oferta
+        response = self.client.get('/oferta/cierre/{}/'.format(oferta.id))
+        # Se comparan los datos. Se comprueba que la oferta ha sido cerrada
+        oferta_despues = Oferta.objects.get(pk=oferta.id)
         self.assertEqual(response.status_code, 302)
-        self.assertRedirects(response, reverse('oferta_detalles', kwargs = {'oferta_id': oferta.id}))
-        self.assertEqual(oferta_despues.vetada, True)
-        self.assertEqual(oferta.motivo_veto, oferta_despues.motivo_veto)
+        self.assertRedirects(response, '/oferta/detalles/{}/'.format(oferta.id))
+        self.assertTrue(oferta_despues.cerrada)
         # El usuario se desloguea
         self.logout()
 
-    '''
+    # Un usuario trata de cerrar una oferta que ya está cerrada
+    def test_cierra_oferta_cerrada(self):
+        # Se inicializan variables y se loguea el usuario
+        username = 'usuario1'
+        password = 'usuario1'
+        usuario = self.login(username, password)
+        # Se busca una oferta para cerrarla
+        oferta = Oferta.objects.filter(autor=usuario, cerrada=True, borrador=False, vetada=False).first()
+        # Se realiza la petición para cerrar la oferta
+        response = self.client.get('/oferta/cierre/{}/'.format(oferta.id))
+        # Se comparan los datos. Se comprueba que, al estar la oferta cerrada, no se ha realizado nada
+        self.assertEqual(response.status_code, 302)
+        self.assertRedirects(response, '/oferta/detalles/{}/'.format(oferta.id))
+        # El usuario se desloguea
+        self.logout()
+
+    # Un usuario trata de cerrar una oferta en modo borrador
+    def test_cierra_oferta_borrador(self):
+        # Se inicializan variables y se loguea el usuario
+        username = 'usuario1'
+        password = 'usuario1'
+        usuario = self.login(username, password)
+        # Se busca una oferta para cerrarla
+        oferta = Oferta.objects.filter(autor=usuario, cerrada=False, borrador=True, vetada=False).first()
+        # Se realiza la petición para cerrar la oferta
+        response = self.client.get('/oferta/cierre/{}/'.format(oferta.id))
+        # Se comparan los datos. Se comprueba que, al estar la oferta en modo borrador, la oferta no se ha cerrado
+        oferta_despues = Oferta.objects.get(pk=oferta.id)
+        self.assertEqual(response.status_code, 302)
+        self.assertRedirects(response, '/oferta/detalles/{}/'.format(oferta.id))
+        self.assertFalse(oferta_despues.cerrada)
+        self.assertTrue(oferta_despues.borrador)
+        # El usuario se desloguea
+        self.logout()
+
+    # Un usuario trata de cerrar una oferta vetada
+    def test_cierra_oferta_vetada(self):
+        # Se inicializan variables y se loguea el usuario
+        username = 'usuario1'
+        password = 'usuario1'
+        usuario = self.login(username, password)
+        # Se busca una oferta para cerrarla
+        oferta = Oferta.objects.filter(autor=usuario, cerrada=False, borrador=False, vetada=True).first()
+        # Se realiza la petición para cerrar la oferta
+        response = self.client.get('/oferta/cierre/{}/'.format(oferta.id))
+        # Se comparan los datos. Se comprueba que, al estar la oferta en modo borrador, la oferta no se ha cerrado
+        oferta_despues = Oferta.objects.get(pk=oferta.id)
+        self.assertEqual(response.status_code, 302)
+        self.assertRedirects(response, '/oferta/detalles/{}/'.format(oferta.id))
+        self.assertFalse(oferta_despues.cerrada)
+        self.assertTrue(oferta_despues.vetada)
+        self.assertEqual(oferta_despues.motivo_veto, oferta.motivo_veto)
+        # El usuario se desloguea
+        self.logout()
+
+    # Un usuario trata de cerrar una oferta sin estar autenticado
+    def test_cierra_oferta_sin_autenticar(self):
+        # Se inicializan variables
+        oferta = Oferta.objects.filter(vetada=False, cerrada=False, borrador=False).first()
+        # Se realiza la petición para cerrar la oferta
+        response = self.client.get('/oferta/cierre/{}/'.format(oferta.id))
+        # Se obtienen las variables de salida
+        oferta_despues = Oferta.objects.get(pk=oferta.id)
+        # Se comparan los datos. Se comprueba que la oferta no ha sufrido cambios y que se ha redirigido al usuario al
+        # login, puesto a que se require autenticación para cerrar una oferta.
+        self.assertEqual(response.status_code, 302)
+        self.assertRedirects(response, '/login/?next=/oferta/cierre/{}/'.format(oferta.id))
+        self.assertEqual(oferta_despues.cerrada, False)
+        # El usuario se desloguea
+        self.logout()
+
+    # Un usuario trata de cerrar una oferta que no le pertenece
+    def test_cierra_oferta_ajena(self):
+        # Se inicializan variables y se loguea el usuario
+        username = 'usuario1'
+        password = 'usuario1'
+        usuario = self.login(username, password)
+        # Se busca una oferta para cerrarla
+        oferta = Oferta.objects.filter(cerrada=False, borrador=False, vetada=False).exclude(autor=usuario).first()
+        # Se realiza la petición para cerrar la oferta
+        response = self.client.get('/oferta/cierre/{}/'.format(oferta.id))
+        # Se comparan los datos. Se comprueba que, al estar la oferta en modo borrador, la oferta no se ha cerrado
+        oferta_despues = Oferta.objects.get(pk=oferta.id)
+        self.assertEqual(response.status_code, 302)
+        self.assertRedirects(response, '/oferta/detalles/{}/'.format(oferta.id))
+        self.assertFalse(oferta_despues.cerrada)
+        # El usuario se desloguea
+        self.logout()
+
+    # Un usuario trata de cerrar una oferta que no existe
+    def test_cierra_oferta_inexistente(self):
+        # Se inicializan variables y se loguea el usuario
+        username = 'usuario1'
+        password = 'usuario1'
+        usuario = self.login(username, password)
+        oferta_id = 0
+        # Se realiza la petición para cerrar la oferta
+        response = self.client.get('/oferta/cierre/{}/'.format(oferta_id))
+        # Se comparan los datos. Se comprueba que, al no existir la oferta, se redirige al usuario al listado de ofertas
+        self.assertEqual(response.status_code, 302)
+        self.assertRedirects(response, '/oferta/listado/')
+        # El usuario se desloguea
+        self.logout()
