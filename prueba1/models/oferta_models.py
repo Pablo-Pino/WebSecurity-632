@@ -24,3 +24,24 @@ class Oferta(models.Model):
         # No puede haber una oferta vetada sin motivo de veto
         if self.vetada and not self.motivo_veto:
             raise ValidationError('No puede haber una oferta vetada sin motivo de veto')
+
+
+
+class Solicitud(models.Model):
+    usuario = models.ForeignKey(Usuario, related_name='solicitudes', on_delete=models.CASCADE)
+    oferta = models.ForeignKey(Oferta, related_name='solicitudes', on_delete=models.CASCADE)
+
+    class Meta:
+       unique_together = ['usuario', 'oferta']
+
+    def clean(self):
+        super().clean()
+        # No puede haber una oferta en modo borrador en una solicitud
+        if self.oferta.borrador:
+            raise ValidationError('No puede haber una oferta en modo borrador en una solicitud')
+        actividades_requeridas = self.oferta.actividades.all()
+        actividades_realizadas = self.usuario.actividades_realizadas.all()
+        for actividad in actividades_requeridas:
+            if not actividad in actividades_realizadas:
+                raise ValidationError("El usuario debe haber resuelto todas las actividades para poder solicitar la oferta")
+

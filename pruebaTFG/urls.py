@@ -17,7 +17,7 @@ from django.contrib import admin
 from django.urls import path, include
 from prueba1.views.actividad_views import ListadoActividadesView, CreacionActividadesView, EdicionActividadesView, EliminacionActividadesView, DetallesActividadesView, VetoActividadesView, LevantamientoVetoActividadesView
 from prueba1.views.oferta_views import ListadoOfertaView, CreacionOfertaView, DetallesOfertaView, EdicionOfertaView, \
-    EliminacionOfertaView, VetoOfertaView, LevantamientoVetoOfertaView, CierreOfertaView
+    EliminacionOfertaView, VetoOfertaView, LevantamientoVetoOfertaView, CierreOfertaView, SolicitudOfertaView, RetiroSolicitudOfertaView
 from prueba1.views.perfil_views import RegistroUsuarioView, DetallesPerfilView, EdicionPerfilView, CreacionAnexoView, EdicionAnexoView, EliminacionAnexoView
 from prueba1.views.sesionactividad_views import SesionActividadComienzo, SesionActividadFinal
 from prueba1.views.views import EjercicioMock1View, EjercicioMock2View, EjercicioMock3View
@@ -53,6 +53,8 @@ urlpatterns = [
     path('oferta/veto/<int:oferta_id>/', VetoOfertaView.as_view(), name='oferta_veto'),
     path('oferta/levantamiento_veto/<int:oferta_id>/', LevantamientoVetoOfertaView.as_view(), name='oferta_levantamiento_veto'),
     path('oferta/cierre/<int:oferta_id>/', CierreOfertaView.as_view(), name='oferta_cierre'),
+    path('oferta/solicitud/<int:oferta_id>/', SolicitudOfertaView.as_view(), name='solicitud_oferta'),
+    path('oferta/retiro_solicitud/<int:oferta_id>/', RetiroSolicitudOfertaView.as_view(), name='retiro_solicitud_oferta'),
     path('anexo/creacion_edicion/', CreacionAnexoView.as_view(), name = 'anexo_creacion'),
     path('anexo/creacion_edicion/<int:anexo_id>/', EdicionAnexoView.as_view(), name = 'anexo_edicion'),
     path('anexo/eliminacion/<int:anexo_id>/', EliminacionAnexoView.as_view(), name = 'anexo_eliminacion'),

@@ -129,6 +129,10 @@ class PerfilTestCase(TestCase):
             es_sesionactividad_eliminada = True
         self.assertEquals(numero_sesionactividad_antes, numero_sesionactividad_despues + 1)
         self.assertTrue(es_sesionactividad_eliminada)
+        # Se comprueba que ahora la actividad está registrada como actividad realizada por el usuario
+        usuario_despues = Usuario.objects.get(pk=usuario.id)
+        actividades_realizadas_despues = usuario_despues.actividades_realizadas.all()
+        self.assertTrue(actividad in actividades_realizadas_despues)
         # El usuario se desloguea
         self.logout()
 
@@ -174,4 +178,5 @@ class PerfilTestCase(TestCase):
         # El usuario se desloguea
         self.logout()
 
+    # Se elimina una sesion de una actividad que el usuario ya ha realizado previamente
 

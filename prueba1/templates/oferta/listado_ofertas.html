@@ -45,6 +45,17 @@
                                 <button id="button_levantar_veto_{{ oferta.id }}" onclick="alerta_redireccion('Desea levantar el veto sobre est oferta ?', '/oferta/levantamiento_veto/{{ oferta.id }}/')">Levantar el veto sobre la oferta</button>
                             </td>
                         {% endif %}
+                        {% if not oferta.borrador and not oferta.vetada %}
+                            {% if oferta in ofertas_retirables %}
+                                <td>
+                                    <button id="button_retirar_solicitud_oferta_{{ oferta.id }}" onclick="window.location.href = '/oferta/retiro_solicitud/{{ oferta.id }}/'">Retirar la solicitud de la oferta</button>
+                                </td>
+                            {% elif oferta in ofertas_solicitables %}
+                                <td>
+                                    <button id="button_solicitar_oferta_{{ oferta.id }}" onclick="window.location.href = '/oferta/solicitud/{{ oferta.id }}/'">Solicitar la oferta</button>
+                                </td>
+                            {% endif %}
+                        {% endif %}
                     {% endif %}
                 </tr>
             {% endfor %}

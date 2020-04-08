@@ -25,3 +25,14 @@ def elimina_sesionactividad(request, actividad):
     token = request.data['token']
     sesionactividad = SesionActividad.objects.get(token = token, actividad = actividad)
     sesionactividad.delete()
+
+@transaction.atomic
+def añade_actividad_realizada(request, actividad):
+    if not request.user.is_authenticated:
+        raise Exception('Se debe estar autenticado para realizar una actividad')
+    # No se puede considerar realizada una actividad si no está en modo borrador
+    if not actividad.borrador:
+        usuario = request.user
+        usuario.actividades_realizadas.append(actividad)
+        usuario.save()
+

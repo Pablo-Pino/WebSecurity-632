@@ -10,13 +10,13 @@ from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 
 from prueba1.exceptions import UnallowedUserException
 from prueba1.forms.oferta_forms import OfertaCreacionForm, OfertaEdicionForm, OfertaVetoForm
-from prueba1.models.oferta_models import Oferta
+from prueba1.models.oferta_models import Oferta, Solicitud
 from prueba1.models.perfil_models import Usuario
 from prueba1.services.oferta_services import crea_oferta, edita_oferta, elimina_oferta, veta_oferta, \
-    levanta_veto_oferta, oferta_formulario, lista_ofertas, cierra_oferta
+    levanta_veto_oferta, oferta_formulario, lista_ofertas, cierra_oferta, solicita_oferta, retira_solicitud_oferta
 
 
-class ListadoOfertaView(View):
+class ListadoOfertaView(LoginRequiredMixin, View):
     # No se requieren permisos para visitar esta pagina
     template_name = 'oferta/listado_ofertas.html'
 
@@ -29,8 +29,31 @@ class ListadoOfertaView(View):
             usuario = Usuario.objects.get(django_user_id = request.user.id)
         except ObjectDoesNotExist:
             usuario = None
+        ofertas = lista_ofertas(request)
+        ofertas_solicitables = []
+        ofertas_retirables = []
+        ofertas_solicitadas = []
+        solicitudes_usuario = list(Solicitud.objects.filter(usuario=usuario).only('oferta').distinct())
+        for solicitud in solicitudes_usuario:
+            ofertas_solicitadas.append(solicitud.oferta)
+        for oferta in ofertas:
+            if not oferta.cerrada and not oferta.vetada and oferta in ofertas_solicitadas:
+                ofertas_retirables.append(oferta)
+            elif not oferta.borrador and not oferta.cerrada and not oferta.vetada and not oferta in ofertas_solicitadas:
+                es_solicitable = True
+                for actividad_requerida in oferta.actividades.all():
+                    if not actividad_requerida in usuario.actividades_realizadas.all():
+                        es_solicitable = False
+                        break
+                if es_solicitable:
+                    ofertas_solicitables.append(oferta)
         # Se añaden al contexto las oferta y el usuario y se muestra el listado
-        context.update({'ofertas': lista_ofertas(request), 'usuario': usuario})
+        context.update({
+            'ofertas': ofertas,
+            'usuario': usuario,
+            'ofertas_solicitables': ofertas_solicitables,
+            'ofertas_retirables': ofertas_retirables,
+        })
         return render(request, self.template_name, context)
 
 class CreacionOfertaView(LoginRequiredMixin, View):
@@ -231,11 +254,27 @@ class DetallesOfertaView(View):
         # listado de oferta
         except ObjectDoesNotExist as e:
             return oferta_no_hallada(request)
+        # Se mira si la oferta ha sido solicitada
+        es_solicitada = Solicitud.objects.filter(usuario=usuario, oferta=oferta).exists()
+        retirable = False
+        solicitable = False
+        if es_solicitada:
+            if not oferta.vetada and not oferta.cerrada:
+                retirable = True
+        else:
+            if not oferta.cerrada and not oferta.vetada and not oferta.borrador:
+                solicitable = True
+                for actividad_requerida in oferta.actividades.all():
+                    if not actividad_requerida in usuario.actividades_realizadas.all():
+                        solicitable = False
+                        break
         # Se añaden al contexto la oferta y el usuario
         context.update({
             'oferta': oferta,
             'usuario': usuario,
             'actividades': oferta.actividades.all(),
+            'retirable': retirable,
+            'solicitable': solicitable,
         })
         # Se muestra la vista de detalles
         return render(request, self.template_name, context)
@@ -361,7 +400,6 @@ class LevantamientoVetoOfertaView(UserPassesTestMixin, View):
         # Si sucede alguna excepción, se redirige al usuario al listado de oferta con un mensaje de error
         except Exception as e:
             messages.error(request, 'No se poseen los permisos o requisitos necesarios para realizar esta accion')
-            messages.error(request, e.args)
             return HttpResponseRedirect(reverse('oferta_detalles', kwargs = {'oferta_id': oferta_id}))
         # En caso de éxito, se redirige al usuario al listado de oferta con un mensaje de éxito
         messages.success(request, 'Se ha levantado el veto sobre la oferta con éxito')
@@ -386,11 +424,59 @@ class CierreOfertaView(LoginRequiredMixin, View):
         # Si sucede alguna excepción, se redirige al usuario a los detalles de la oferta con un mensaje de error
         except Exception as e:
             messages.error(request, 'No se poseen los permisos o requisitos necesarios para realizar esta accion')
-            messages.error(request, e.args)
             return HttpResponseRedirect(reverse('oferta_detalles', kwargs = {'oferta_id': oferta_id}))
         # En caso de éxito, se redirige al usuario a los detalles de la oferta con un mensaje de éxito
         messages.success(request, 'Se ha cerrado la oferta con éxito')
         return HttpResponseRedirect(reverse('oferta_detalles', kwargs = {'oferta_id': oferta_id}))
+
+class SolicitudOfertaView(LoginRequiredMixin, View):
+    template_name = 'oferta/detalles_ofertas.html'
+
+    def get(self, request, oferta_id):
+        context = {}
+        # Se comprueba que se puede solicitar la oferta
+        res = comprueba_solicitar_oferta(request, oferta_id)
+        # Si el resultado es una oferta, entonces se almacena en la variable correspondiente
+        if isinstance(res, Oferta):
+            oferta = res
+        # Si el resultado es una redirección, entonces se aplica la redirección
+        elif isinstance(res, HttpResponseRedirect):
+            return res
+        # Se intenta solicitar la oferta
+        try:
+            solicita_oferta(request, oferta)
+        # Si sucede alguna excepción, se redirige al usuario a los detalles de la oferta con un mensaje de error
+        except Exception as e:
+            messages.error(request, 'No se poseen los permisos o requisitos necesarios para realizar esta accion')
+            return HttpResponseRedirect(reverse('oferta_detalles', kwargs = {'oferta_id': oferta_id}))
+        # En caso de éxito, se redirige al usuario a los detalles de la oferta con un mensaje de éxito
+        messages.success(request, 'Se ha realizado la solicitud con éxito')
+        return HttpResponseRedirect(reverse('oferta_detalles', kwargs = {'oferta_id': oferta_id}))
+
+class RetiroSolicitudOfertaView(LoginRequiredMixin, View):
+    template_name = 'oferta/detalles_ofertas.html'
+
+    def get(self, request, oferta_id):
+        context = {}
+        # Se comprueba que se puede retirnr la solicitud de la oferta
+        res = comprueba_retirar_solicitud_oferta(request, oferta_id)
+        # Si el resultado es una solicitud, entonces se almacena en la variable correspondiente
+        if isinstance(res, Solicitud):
+            solicitud = res
+        # Si el resultado es una redirección, entonces se aplica la redirección
+        elif isinstance(res, HttpResponseRedirect):
+            return res
+        # Se intenta retirar la solicitud de la oferta
+        try:
+            retira_solicitud_oferta(request, solicitud)
+        # Si sucede alguna excepción, se redirige al usuario a los detalles de la oferta con un mensaje de error
+        except Exception as e:
+            messages.error(request, 'No se poseen los permisos o requisitos necesarios para realizar esta accion')
+            return HttpResponseRedirect(reverse('oferta_detalles', kwargs={'oferta_id': oferta_id}))
+        # En caso de éxito, se redirige al usuario a los detalles de la oferta con un mensaje de éxito
+        messages.success(request, 'Se ha retirado la solicitud con éxito')
+        return HttpResponseRedirect(reverse('oferta_detalles', kwargs={'oferta_id': oferta_id}))
+
 
 
 #   Funciones utiles
@@ -509,7 +595,7 @@ def comprueba_cerrar_oferta(request, oferta_id):
         return oferta_no_hallada(request)
     # Si la oferta está vetada no se puede cerrar, por lo que se redirige al usuario a la vista de detalles
     if oferta.vetada:
-        messages.error(request, 'No se cerrar una oferta vetada')
+        messages.error(request, 'No se puede cerrar una oferta vetada')
         return HttpResponseRedirect(reverse('oferta_detalles', kwargs={'oferta_id': oferta_id}))
     # Si la oferta está en modo borrador, no se puede cerrar
     if oferta.borrador:
@@ -520,3 +606,72 @@ def comprueba_cerrar_oferta(request, oferta_id):
         messages.error(request, 'No se puede cerrar una oferta que está cerrada')
         return HttpResponseRedirect(reverse('oferta_detalles', kwargs={'oferta_id': oferta_id}))
     return oferta
+
+def comprueba_solicitar_oferta(request, oferta_id):
+    # Se trata de obtener la oferta
+    try:
+        oferta = Oferta.objects.get(pk=oferta_id)
+    # Si no se encuentra la oferta se redirige al listado de oferta
+    except ObjectDoesNotExist as e:
+        return oferta_no_hallada(request)
+    # Si la oferta está vetada no se puede solicitar, por lo que se redirige al usuario a la vista de detalles
+    if oferta.vetada:
+        messages.error(request, 'No se puede solicitar una oferta vetada')
+        return HttpResponseRedirect(reverse('oferta_detalles', kwargs={'oferta_id': oferta_id}))
+    # Si la oferta está en modo borrador, no se puede solicitar
+    if oferta.borrador:
+        messages.error(request, 'No se puede solicitar una oferta que está en modo borrador')
+        return HttpResponseRedirect(reverse('oferta_detalles', kwargs={'oferta_id': oferta_id}))
+    # Si la oferta está cerrada, entonces no se puede solicitar
+    if oferta.cerrada:
+        messages.error(request, 'No se puede solicitar una oferta que está cerrada')
+        return HttpResponseRedirect(reverse('oferta_detalles', kwargs={'oferta_id': oferta_id}))
+    # Comprueba que el usuario no tenga ya una solicitud en la oferta
+    usuario = Usuario.objects.get(django_user__id=request.user.id)
+    tiene_solicitud = True
+    try:
+        Solicitud.objects.get(usuario=usuario, oferta=oferta)
+    except ObjectDoesNotExist as e:
+        tiene_solicitud = False
+    if tiene_solicitud:
+        messages.error(request, 'No se puede solicitar una oferta en la que ya se tiene una solicitud')
+        return HttpResponseRedirect(reverse('oferta_detalles', kwargs={'oferta_id': oferta_id}))
+    # Comprueba que el usuario cumple con los requisitos
+    actividades_requeridas = oferta.actividades.all()
+    actividades_realizadas = usuario.actividades_realizadas.all()
+    cumple_requisitos = True
+    for actividad_requerida in actividades_requeridas:
+        if not actividad_requerida in actividades_realizadas:
+            cumple_requisitos = False
+    if not cumple_requisitos:
+        messages.error(request, 'No se puede solicitar una oferta cuyos actividades requeridas no se han resuelto')
+        return HttpResponseRedirect(reverse('oferta_detalles', kwargs={'oferta_id': oferta_id}))
+    return oferta
+
+def comprueba_retirar_solicitud_oferta(request, oferta_id):
+    # Se trata de obtener la oferta
+    try:
+        oferta = Oferta.objects.get(pk=oferta_id)
+    # Si no se encuentra la oferta se redirige al listado de oferta
+    except ObjectDoesNotExist as e:
+        return oferta_no_hallada(request)
+    # Si la oferta está vetada no se puede solicitar, por lo que se redirige al usuario a la vista de detalles
+    if oferta.vetada:
+        messages.error(request, 'No se puede retirar la solicitud de una oferta vetada')
+        return HttpResponseRedirect(reverse('oferta_detalles', kwargs={'oferta_id': oferta_id}))
+    # Si la oferta está en modo borrador, no se puede solicitar
+    if oferta.borrador:
+        messages.error(request, 'No se puede retirar la solicitud de una oferta que está en modo borrador')
+        return HttpResponseRedirect(reverse('oferta_detalles', kwargs={'oferta_id': oferta_id}))
+    # Si la oferta está cerrada, entonces no se puede solicitar
+    if oferta.cerrada:
+        messages.error(request, 'No se puede retirar la solicitud de una oferta que está cerrada')
+        return HttpResponseRedirect(reverse('oferta_detalles', kwargs={'oferta_id': oferta_id}))
+    # Comprueba que el usuario tenga ya una solicitud en la oferta
+    usuario = Usuario.objects.get(django_user__id=request.user.id)
+    try:
+        solicitud = Solicitud.objects.get(usuario=usuario, oferta=oferta)
+        return solicitud
+    except ObjectDoesNotExist as e:
+        messages.error(request, 'No se puede retirar la solicitud de una oferta en la que no se tiene una solicitud')
+        return HttpResponseRedirect(reverse('oferta_detalles', kwargs={'oferta_id': oferta_id}))

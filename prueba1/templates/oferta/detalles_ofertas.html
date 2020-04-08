@@ -65,5 +65,16 @@
             </td>
         {% endif %}
     {% endif %}
+    {% if not oferta.borrador and not oferta.vetada and not oferta.cerrada %}
+        {% if retirable %}
+            <td>
+                <button id="button_retirar_solicitud" onclick="window.location.href = '/oferta/retiro_solicitud/{{ oferta.id }}/'">Retirar la solicitud de la oferta</button>
+            </td>
+        {% elif solicitable %}
+            <td>
+                <button id="button_solicitar" onclick="window.location.href = '/oferta/solicitud/{{ oferta.id }}/'">Solicitar la oferta</button>
+            </td>
+        {% endif %}
+    {% endif %}
 
 {% endblock %}

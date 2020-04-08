@@ -28,7 +28,6 @@ class SesionActividadComienzo(APIView):
         json_response = JsonResponse(data, safe=False)
         return json_response
 
-
 class SesionActividadFinal(APIView):
     parser_classes = [JSONParser]
 
@@ -43,6 +42,7 @@ class SesionActividadFinal(APIView):
                 actividad = Actividad.objects.get(identificador = identificador)
                 sesionactividad_services.elimina_sesionactividad(request, actividad)
                 # Manda una respuesta
+                sesionactividad_services.añade_actividad_realizada(request, actividad)
                 json_response = JsonResponse({'status': 'Se ha realizado correctamente la actividad'}, status=201)
                 return json_response
             json_response = JsonResponse(serializer.errors, status=500)

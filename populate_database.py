@@ -1,10 +1,10 @@
 from django.contrib.auth.models import User
 from prueba1.models.actividad_models import Actividad, SesionActividad
 from prueba1.models.perfil_models import Usuario, Anexo
-from prueba1.models.oferta_models import Oferta
+from prueba1.models.oferta_models import Oferta, Solicitud
 from datetime import date
 
-# Django users
+# DJANGO USERS Y USUARIOS
 
 django_user_1 = User.objects.create_user(
     'usuario1',
@@ -29,8 +29,6 @@ django_user_3 = User.objects.create_user(
     first_name = 'Juan',
     last_name = 'Nieves'
 )
-
-# Usuarios
 
 usuario_1 = Usuario(
     django_user = django_user_1,
@@ -64,7 +62,9 @@ for usuario in usuarios:
     usuario.full_clean()
     usuario.save()
 
-# Anexos
+
+
+# ANEXOS
 
 anexo_1 = Anexo(
     usuario = usuario_1,
@@ -103,7 +103,9 @@ for anexo in anexos:
     anexo.full_clean()
     anexo.save()
 
-# Actividades
+
+
+# ACTIVIDADES
 
 actividad_1 = Actividad(
     titulo = 'SQL por Federico',
@@ -234,6 +236,28 @@ for actividad in actividades:
     actividad.full_clean()
     actividad.save()
 
+
+
+# RELACION USUARIO-ACTIVIDAD   ACTIVIDADES REALIZADAS
+
+# Se indican las actividades que han realizado los usuarios
+
+list_actividades = [actividad_7, actividad_1, actividad_2, actividad_4, actividad_8, actividad_9]
+usuario_1.actividades_realizadas.set(list_actividades)
+usuario_1.save()
+
+list_actividades = [actividad_8, actividad_2, actividad_5]
+usuario_2.actividades_realizadas.set(list_actividades)
+usuario_2.save()
+
+list_actividades = [actividad_9, actividad_6]
+usuario_3.actividades_realizadas.set(list_actividades)
+usuario_3.save()
+
+
+
+# SESIONACTIVIDADES
+
 sesionactividad_1 = SesionActividad(
     usuario = usuario_2,
     actividad = actividad_7,
@@ -261,6 +285,10 @@ sesionactividades = [
 for sesionactividad in sesionactividades:
     sesionactividad.full_clean()
     sesionactividad.save()
+
+
+
+# OFERTAS
 
 oferta_1 = Oferta(
     titulo = 'Oferta developer',
@@ -395,11 +423,46 @@ oferta_5.actividades.set([actividad_7, actividad_9])
 oferta_6.actividades.set([actividad_2])
 oferta_7.actividades.set([actividad_4])
 oferta_8.actividades.set([actividad_7, actividad_1, actividad_2])
-oferta_9.actividades.set([actividad_7, actividad_9])
+oferta_9.actividades.set([actividad_9])
 
 
 for oferta in ofertas:
     oferta.full_clean()
     oferta.save()
+
+
+
+# SOLICITUDES
+
+solicitud_1 = Solicitud(
+    usuario=usuario_1,
+    oferta=oferta_2
+)
+
+solicitud_2 = Solicitud(
+    usuario=usuario_2,
+    oferta=oferta_6
+)
+
+solicitud_3 = Solicitud(
+    usuario=usuario_1,
+    oferta=oferta_7
+)
+
+solicitud_4 = Solicitud(
+    usuario=usuario_3,
+    oferta=oferta_9,
+)
+
+solicitudes = [
+    solicitud_1,
+    solicitud_2,
+    solicitud_3,
+    solicitud_4
+]
+
+for solicitud in solicitudes:
+    solicitud.full_clean()
+    solicitud.save()
 
 

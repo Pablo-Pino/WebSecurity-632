@@ -13,7 +13,7 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.wait import WebDriverWait
 
 from prueba1.models.actividad_models import Actividad
-from prueba1.models.oferta_models import Oferta
+from prueba1.models.oferta_models import Oferta, Solicitud
 from prueba1.models.perfil_models import Usuario
 from prueba1.models.oferta_models import Oferta
 
@@ -89,6 +89,28 @@ class OfertaTestCase(StaticLiveServerTestCase):
 
     def evaluar_columnas_listado_oferta(self, oferta_esperadas, usuario):
         i = 2
+        ofertas = []
+        if usuario.es_admin:
+            ofertas = list(Oferta.objects.exclude((Q(cerrada=True) | Q(borrador=True)) & ~Q(autor=usuario)))
+        else:
+            ofertas = list(Oferta.objects.exclude((Q(cerrada=True) | Q(borrador=True) | Q(vetada=True)) & ~Q(autor=usuario)))
+        ofertas_solicitables = []
+        ofertas_retirables = []
+        ofertas_solicitadas = []
+        solicitudes_usuario = list(Solicitud.objects.filter(usuario=usuario).only('oferta').distinct())
+        for solicitud in solicitudes_usuario:
+            ofertas_solicitadas.append(solicitud.oferta)
+        for oferta in ofertas:
+            if not oferta.cerrada and not oferta.vetada and oferta in ofertas_solicitadas:
+                ofertas_retirables.append(oferta)
+            elif not oferta.borrador and not oferta.cerrada and not oferta.vetada and not oferta in ofertas_solicitadas:
+                es_solicitable = True
+                for actividad_requerida in oferta.actividades.all():
+                    if not actividad_requerida in usuario.actividades_realizadas.all():
+                        es_solicitable = False
+                        break
+                if es_solicitable:
+                    ofertas_solicitables.append(oferta)
         # Por cada una de las oferta que debe aparecer
         for oferta in oferta_esperadas:
             # Se comprueba el título
@@ -168,11 +190,37 @@ class OfertaTestCase(StaticLiveServerTestCase):
                     boton_levanta_veto = True
                     j = j + 1
                 else:
-                    self.assertEqual(boton_levanta_veto.get_attribute('id'), 'button_levantar_veto_{}'.format(oferta.id), False)
+                    self.assertEqual(boton_levanta_veto.get_attribute('id') == 'button_levantar_veto_{}'.format(oferta.id), False)
                     boton_levanta_veto = False
             except NoSuchElementException:
                 boton_levanta_veto = False
             self.assertEqual(usuario.es_admin and not oferta.borrador and oferta.vetada, boton_levanta_veto)
+            # Se comprueba que está el botón de solicitar la oferta, si procede
+            existe_boton_solicitud = True
+            try:
+                boton_solicitud = self.selenium.find_element_by_xpath('//tbody/child::tr[{}]/child::td[{}]/child::button'.format(i, j))
+                if oferta in ofertas_solicitables:
+                    self.assertEqual(boton_solicitud.get_attribute('id'), 'button_solicitar_oferta_{}'.format(oferta.id))
+                    j = j + 1
+                else:
+                    self.assertEqual(boton_solicitud.get_attribute('id') == 'button_solicitar_oferta_{}'.format(oferta.id), False)
+                    existe_boton_solicitud = False
+            except NoSuchElementException:
+                existe_boton_solicitud = False
+            self.assertEqual(oferta in ofertas_solicitables, existe_boton_solicitud)
+            # Se comprueba que está el botón de retirar la oferta, si procede
+            existe_boton_retiro_solicitud = True
+            try:
+                boton_retiro_solicitud = self.selenium.find_element_by_xpath('//tbody/child::tr[{}]/child::td[{}]/child::button'.format(i, j))
+                if oferta in ofertas_retirables:
+                    self.assertEqual(boton_retiro_solicitud.get_attribute('id'), 'button_retirar_solicitud_oferta_{}'.format(oferta.id))
+                    j = j + 1
+                else:
+                    self.assertEqual(boton_retiro_solicitud.get_attribute('id') == 'button_retirar_solicitud_oferta_{}'.format(oferta.id), False)
+                    existe_boton_retiro_solicitud = False
+            except NoSuchElementException:
+                existe_boton_retiro_solicitud = False
+            self.assertEqual(oferta in ofertas_retirables, existe_boton_retiro_solicitud)
             i = i + 1
 
 
@@ -278,6 +326,27 @@ class OfertaTestCase(StaticLiveServerTestCase):
         self.logout()
 
     def detalles_oferta(self, oferta, usuario):
+        # Se inicializan variables necesarias
+        ofertas = []
+        if usuario.es_admin:
+            ofertas = list(Oferta.objects.exclude((Q(cerrada=True) | Q(borrador=True)) & ~Q(autor=usuario)))
+        else:
+            ofertas = list(
+                Oferta.objects.exclude((Q(cerrada=True) | Q(borrador=True) | Q(vetada=True)) & ~Q(autor=usuario)))
+        es_retirable = False
+        es_solicitable = False
+        ofertas_solicitadas = []
+        solicitudes_usuario = list(Solicitud.objects.filter(usuario=usuario).only('oferta').distinct())
+        for solicitud in solicitudes_usuario:
+            ofertas_solicitadas.append(solicitud.oferta)
+        if not oferta.cerrada and not oferta.vetada and oferta in ofertas_solicitadas:
+            es_retirable = True
+        elif not oferta.borrador and not oferta.cerrada and not oferta.vetada and not oferta in ofertas_solicitadas:
+            es_solicitable = True
+            for actividad_requerida in oferta.actividades.all():
+                if not actividad_requerida in usuario.actividades_realizadas.all():
+                    es_solicitable = False
+                    break
         # Se accede a los detalles de la oferta
         self.selenium.get('{}{}'.format(self.live_server_url, '/oferta/detalles/{}'.format(oferta.id)))
         # Se comprueba que el encabezado es el correcto
@@ -365,6 +434,18 @@ class OfertaTestCase(StaticLiveServerTestCase):
             self.selenium.find_element_by_id('button_levantar_veto')
         except NoSuchElementException as e:
             existe_boton_levantar_veto = False
+        # Mira si hay un boton de solicitar la oferta
+        existe_boton_solicitar = True
+        try:
+            self.selenium.find_element_by_id('button_solicitar')
+        except NoSuchElementException as e:
+            existe_boton_solicitar = False
+        # Mira si hay un boton de retirar la solicitud de la oferta
+        existe_boton_retirar_solicitud = True
+        try:
+            self.selenium.find_element_by_id('button_retirar_solicitud')
+        except NoSuchElementException as e:
+            existe_boton_retirar_solicitud = False
         # Si el usuario es el autor de la oferta, entonces debe poder editarla o eliminarla si la oferta está en
         # modo borrador
         if oferta.borrador and not oferta.vetada and not oferta.cerrada and oferta.autor == usuario:
@@ -395,6 +476,16 @@ class OfertaTestCase(StaticLiveServerTestCase):
         # En cualquier otro caso no aparece el boton de levantar el veto
         else:
             self.assertFalse(existe_boton_levantar_veto)
+        # Si la oferta se puede solicitar, se muestra el botón de solicitar oferta
+        if es_solicitable:
+            self.assertTrue(existe_boton_solicitar)
+        else:
+            self.assertFalse(existe_boton_solicitar)
+        # Si se puede retirar la solicitud de la oferta, se muestra el botón de retirar la solcitud
+        if es_retirable:
+            self.assertTrue(existe_boton_retirar_solicitud)
+        else:
+            self.assertFalse(existe_boton_retirar_solicitud)
         # Se mira si está el motivo de veto de la oferta
         existe_motivo_veto = True
         try:
@@ -1079,8 +1170,6 @@ class OfertaTestCase(StaticLiveServerTestCase):
         # El usuario se desloguea
         self.logout()
 
-    '''
-
     # Un usuario cierra una oferta pero cancela el cierre
     def test_cierra_oferta_sin_aceptar(self):
         # El usuario se loguea y se obtienen las variables que se van a usar en el test
@@ -1099,8 +1188,6 @@ class OfertaTestCase(StaticLiveServerTestCase):
         self.assertFalse(oferta_recibida.cerrada)
         # El usuario se desloguea
         self.logout()
-
-    '''
 
     # Un usuario cierra una oferta sin estar autenticado
     def test_cierra_oferta_sin_loguear(self):
@@ -1156,3 +1243,414 @@ class OfertaTestCase(StaticLiveServerTestCase):
         # El usuario se desloguea
         self.logout()
 
+
+
+    # TESTS SOLICITUD
+
+    def test_solicita_oferta(self):
+        # El usuario se loguea y se obtienen las variables que se van a usar en el test
+        usuario = self.login('usuario1', 'usuario1')
+        # Se busca una oferta que se pueda solicitar
+        ofertas_solicitadas = []
+        for solicitud in list(Solicitud.objects.filter(usuario=usuario).only('oferta')):
+            ofertas_solicitadas.append(solicitud.oferta)
+        ofertas_posibles = []
+        for oferta_for in list(Oferta.objects.filter(borrador=False, vetada=False, cerrada=False)):
+            ofertas_posibles.append(oferta_for)
+        actividades_realizadas = Usuario.objects.get(pk=usuario.id).actividades_realizadas.all()
+        # Se comprueba que no se ha solicitado antes la oferta y que se han realizado las actividades necesarias
+        oferta = None
+        for oferta_posible in ofertas_posibles:
+            puede_solicitar = True
+            # Si no se ha solicitado al oferta antes
+            if not oferta_posible in ofertas_solicitadas:
+                # Comprueba que se han realizado las tareas anteriores
+                actividades_requisitos = oferta_posible.actividades.all()
+                for actividad_requisito in actividades_requisitos:
+                    if not actividad_requisito in actividades_realizadas:
+                        puede_solicitar = False
+                        break
+                if puede_solicitar:
+                    oferta = oferta_posible
+                    break
+        # Se acccede a la url de listado de ofertas
+        self.selenium.get('%s%s' % (self.live_server_url, '/oferta/listado/'))
+        # Se selecciona una oferta para solicitarl
+        boton_solicitud = self.selenium.find_element_by_xpath('//button[@id="button_solicitar_oferta_{}"]'.format(oferta.id))
+        boton_solicitud.click()
+        # Se comprueba que se está en la página de detalles de la oferta
+        # Pero antes se tiene que esperar a que redirija a la página
+        wait_driver = WebDriverWait(self.selenium, 3)
+        wait_driver.until(
+            lambda driv: driv.current_url == '{}/oferta/detalles/{}/'.format(self.live_server_url, oferta.id))
+        self.assertEqual('{}/oferta/detalles/{}/'.format(self.live_server_url, oferta.id),
+                         self.selenium.current_url)
+        # Se busca el mensaje de éxito y se comprueba que es correcto
+        message_success = self.selenium.find_element_by_class_name('alert-success')
+        self.assertEqual(message_success.text, 'Se ha realizado la solicitud con éxito')
+        # Se comprueba que se ha solicitado la oferta
+        try:
+            solicitud = Solicitud.objects.get(usuario=usuario, oferta=oferta)
+        except ObjectDoesNotExist as e:
+            solicitud = None
+        self.assertIsNotNone(solicitud)
+        # El usuario se desloguea
+        self.logout()
+
+    def test_solicita_oferta_sin_requisitos(self):
+        # El usuario se loguea y se obtienen las variables que se van a usar en el test
+        usuario = self.login('usuario2', 'usuario2')
+        # Se busca una oferta que se pueda solicitar
+        ofertas_solicitadas = []
+        for solicitud in list(Solicitud.objects.filter(usuario=usuario).only('oferta')):
+            ofertas_solicitadas.append(solicitud.oferta)
+        ofertas_posibles = []
+        for oferta_for in list(Oferta.objects.filter(borrador=False, vetada=False, cerrada=False)):
+            ofertas_posibles.append(oferta_for)
+        actividades_realizadas = Usuario.objects.get(pk=usuario.id).actividades_realizadas.all()
+        # Se comprueba que no se ha solicitado antes la oferta y que se han realizado las actividades necesarias
+        oferta = None
+        for oferta_posible in ofertas_posibles:
+            puede_solicitar = False
+            # Si no se ha solicitado al oferta antes
+            if not oferta_posible in ofertas_solicitadas:
+                # Comprueba que se han realizado las tareas anteriores
+                actividades_requisitos = oferta_posible.actividades.all()
+                for actividad_requisito in actividades_requisitos:
+                    if not actividad_requisito in actividades_realizadas:
+                        puede_solicitar = True
+                        break
+                if puede_solicitar:
+                    oferta = oferta_posible
+                    break
+        # Se acccede a la url de solicitud de ofertas
+        self.selenium.get('%s%s' % (self.live_server_url, '/oferta/solicitud/{}'.format(oferta.id)))
+        # Se comprueba que se está en la página de detalles de la oferta
+        # Pero antes se tiene que esperar a que redirija a la página
+        wait_driver = WebDriverWait(self.selenium, 3)
+        wait_driver.until(
+            lambda driv: driv.current_url == '{}/oferta/detalles/{}/'.format(self.live_server_url, oferta.id))
+        self.assertEqual('{}/oferta/detalles/{}/'.format(self.live_server_url, oferta.id), self.selenium.current_url)
+        # Se busca el mensaje de éxito y se comprueba que es correcto
+        message_success = self.selenium.find_element_by_class_name('alert-danger')
+        self.assertEqual(message_success.text, 'No se puede solicitar una oferta cuyos actividades requeridas no se han resuelto')
+        # Se comprueba que se ha solicitado la oferta
+        try:
+            solicitud = Solicitud.objects.get(usuario=usuario, oferta=oferta)
+        except ObjectDoesNotExist as e:
+            solicitud = None
+        self.assertIsNone(solicitud)
+        # El usuario se desloguea
+        self.logout()
+
+    def test_solicita_oferta_borrador(self):
+        # El usuario se loguea y se obtienen las variables que se van a usar en el test
+        usuario = self.login('usuario3', 'usuario3')
+        # Se busca una oferta que se pueda solicitar
+        ofertas_solicitadas = []
+        for solicitud in list(Solicitud.objects.filter(usuario=usuario).only('oferta')):
+            ofertas_solicitadas.append(solicitud.oferta)
+        ofertas_posibles = []
+        for oferta_for in list(Oferta.objects.filter(borrador=True, vetada=False, cerrada=False)):
+            ofertas_posibles.append(oferta_for)
+        actividades_realizadas = Usuario.objects.get(pk=usuario.id).actividades_realizadas.all()
+        # Se comprueba que no se ha solicitado antes la oferta y que se han realizado las actividades necesarias
+        oferta = None
+        for oferta_posible in ofertas_posibles:
+            puede_solicitar = True
+            # Si no se ha solicitado al oferta antes
+            if not oferta_posible in ofertas_solicitadas:
+                # Comprueba que se han realizado las tareas anteriores
+                actividades_requisitos = oferta_posible.actividades.all()
+                for actividad_requisito in actividades_requisitos:
+                    if not actividad_requisito in actividades_realizadas:
+                        puede_solicitar = False
+                        break
+                if puede_solicitar:
+                    oferta = oferta_posible
+                    break
+        # Se acccede a la url de solicitud de ofertas
+        self.selenium.get('%s%s' % (self.live_server_url, '/oferta/solicitud/{}'.format(oferta.id)))
+        # Se comprueba que se está en la página de detalles de la oferta
+        # Pero antes se tiene que esperar a que redirija a la página
+        wait_driver = WebDriverWait(self.selenium, 3)
+        wait_driver.until(
+            lambda driv: driv.current_url == '{}/oferta/detalles/{}/'.format(self.live_server_url, oferta.id))
+        self.assertEqual('{}/oferta/detalles/{}/'.format(self.live_server_url, oferta.id),
+                         self.selenium.current_url)
+        # Se busca el mensaje de éxito y se comprueba que es correcto
+        message_success = self.selenium.find_element_by_class_name('alert-danger')
+        self.assertEqual(message_success.text, 'No se puede solicitar una oferta que está en modo borrador')
+        # Se comprueba que se ha solicitado la oferta
+        try:
+            solicitud = Solicitud.objects.get(usuario=usuario, oferta=oferta)
+        except ObjectDoesNotExist as e:
+            solicitud = None
+        self.assertIsNone(solicitud)
+        # El usuario se desloguea
+        self.logout()
+
+    def test_solicita_oferta_cerrada(self):
+        # El usuario se loguea y se obtienen las variables que se van a usar en el test
+        usuario = self.login('usuario1', 'usuario1')
+        # Se busca una oferta que se pueda solicitar
+        ofertas_solicitadas = []
+        for solicitud in list(Solicitud.objects.filter(usuario=usuario).only('oferta')):
+            ofertas_solicitadas.append(solicitud.oferta)
+        ofertas_posibles = []
+        for oferta_for in list(Oferta.objects.filter(borrador=False, vetada=False, cerrada=True)):
+            ofertas_posibles.append(oferta_for)
+        actividades_realizadas = Usuario.objects.get(pk=usuario.id).actividades_realizadas.all()
+        # Se comprueba que no se ha solicitado antes la oferta y que se han realizado las actividades necesarias
+        oferta = None
+        for oferta_posible in ofertas_posibles:
+            puede_solicitar = True
+            # Si no se ha solicitado al oferta antes
+            if not oferta_posible in ofertas_solicitadas:
+                # Comprueba que se han realizado las tareas anteriores
+                actividades_requisitos = oferta_posible.actividades.all()
+                for actividad_requisito in actividades_requisitos:
+                    if not actividad_requisito in actividades_realizadas:
+                        puede_solicitar = False
+                        break
+                if puede_solicitar:
+                    oferta = oferta_posible
+                    break
+        # Se acccede a la url de solicitud de ofertas
+        self.selenium.get('%s%s' % (self.live_server_url, '/oferta/solicitud/{}'.format(oferta.id)))
+        # Se comprueba que se está en la página de detalles de la oferta
+        # Pero antes se tiene que esperar a que redirija a la página
+        wait_driver = WebDriverWait(self.selenium, 3)
+        wait_driver.until(
+            lambda driv: driv.current_url == '{}/oferta/detalles/{}/'.format(self.live_server_url, oferta.id))
+        self.assertEqual('{}/oferta/detalles/{}/'.format(self.live_server_url, oferta.id),
+                         self.selenium.current_url)
+        # Se busca el mensaje de éxito y se comprueba que es correcto
+        message_success = self.selenium.find_element_by_class_name('alert-danger')
+        self.assertEqual(message_success.text, 'No se puede solicitar una oferta que está cerrada')
+        # Se comprueba que se ha solicitado la oferta
+        try:
+            solicitud = Solicitud.objects.get(usuario=usuario, oferta=oferta)
+        except ObjectDoesNotExist as e:
+            solicitud = None
+        self.assertIsNone(solicitud)
+        # El usuario se desloguea
+        self.logout()
+
+    def test_solicita_oferta_vetada(self):
+        # El usuario se loguea y se obtienen las variables que se van a usar en el test
+        usuario = self.login('usuario1', 'usuario1')
+        # Se busca una oferta que se pueda solicitar
+        ofertas_solicitadas = []
+        for solicitud in list(Solicitud.objects.filter(usuario=usuario).only('oferta')):
+            ofertas_solicitadas.append(solicitud.oferta)
+        ofertas_posibles = []
+        for oferta_for in list(Oferta.objects.filter(borrador=False, vetada=True, cerrada=False)):
+            ofertas_posibles.append(oferta_for)
+        actividades_realizadas = Usuario.objects.get(pk=usuario.id).actividades_realizadas.all()
+        # Se comprueba que no se ha solicitado antes la oferta y que se han realizado las actividades necesarias
+        oferta = None
+        for oferta_posible in ofertas_posibles:
+            puede_solicitar = True
+            # Si no se ha solicitado al oferta antes
+            if not oferta_posible in ofertas_solicitadas:
+                # Comprueba que se han realizado las tareas anteriores
+                actividades_requisitos = oferta_posible.actividades.all()
+                for actividad_requisito in actividades_requisitos:
+                    if not actividad_requisito in actividades_realizadas:
+                        puede_solicitar = False
+                        break
+                if puede_solicitar:
+                    oferta = oferta_posible
+                    break
+        # Se acccede a la url de solicitud de ofertas
+        self.selenium.get('%s%s' % (self.live_server_url, '/oferta/solicitud/{}'.format(oferta.id)))
+        # Se comprueba que se está en la página de detalles de la oferta
+        # Pero antes se tiene que esperar a que redirija a la página
+        wait_driver = WebDriverWait(self.selenium, 3)
+        wait_driver.until(
+            lambda driv: driv.current_url == '{}/oferta/detalles/{}/'.format(self.live_server_url, oferta.id))
+        self.assertEqual('{}/oferta/detalles/{}/'.format(self.live_server_url, oferta.id),
+                         self.selenium.current_url)
+        # Se busca el mensaje de éxito y se comprueba que es correcto
+        message_success = self.selenium.find_element_by_class_name('alert-danger')
+        self.assertEqual(message_success.text, 'No se puede solicitar una oferta vetada')
+        # Se comprueba que se ha solicitado la oferta
+        try:
+            solicitud = Solicitud.objects.get(usuario=usuario, oferta=oferta)
+        except ObjectDoesNotExist as e:
+            solicitud = None
+        self.assertIsNone(solicitud)
+        # El usuario se desloguea
+        self.logout()
+      
+    def test_solicita_oferta_sin_autenticar(self):
+        # Se busca una oferta que se pueda solicitar
+        ofertas_posibles = []
+        for oferta_for in list(Oferta.objects.filter(borrador=False, vetada=False, cerrada=False)):
+            ofertas_posibles.append(oferta_for)
+        # Se comprueba que no se ha solicitado antes la oferta y que se han realizado las actividades necesarias
+        oferta = ofertas_posibles[0]
+        # Se acccede a la url de solicitud de la oferta
+        self.selenium.get('%s%s' % (self.live_server_url, '/oferta/solicitud/{}/'.format(oferta.id)))
+        # Se comprueba que se está en la página de login
+        self.assertEqual('{}/login/?next=/oferta/solicitud/{}/'.format(self.live_server_url, oferta.id), self.selenium.current_url)
+
+    def test_solicita_oferta_inexistente(self):
+        # El usuario se loguea y se obtienen las variables que se van a usar en el test
+        usuario = self.login('usuario1', 'usuario1')
+        numero_solicitudes_antes = Solicitud.objects.all().count()
+        # Se acccede a la url de solicitud de la oferta
+        self.selenium.get('%s%s' % (self.live_server_url, '/oferta/solicitud/0/'))
+        # Se comprueba que el mensaje de error es correcto
+        message_success = self.selenium.find_element_by_class_name('alert-danger')  
+        self.assertEqual(message_success.text, 'No se ha encontrado la oferta')           
+        # Se comprueba que no ha solicitado la oferta
+        numero_solicitudes_despues = Solicitud.objects.all().count()
+        self.assertEqual(numero_solicitudes_antes, numero_solicitudes_despues)
+        # El usuario se desloguea
+        self.logout()
+
+
+
+    # TESTS RETIRO SOLICITUD
+
+    def test_retira_solicitud(self):
+        # El usuario se loguea y se obtienen las variables que se van a usar en el test
+        usuario = self.login('usuario1', 'usuario1')
+        # Se busca una oferta que se pueda retirar
+        oferta = Solicitud.objects.filter(oferta__vetada=False, oferta__borrador=False, oferta__cerrada=False).first().oferta
+        # Se acccede a la url de listado de ofertas
+        self.selenium.get('%s%s' % (self.live_server_url, '/oferta/listado/'))
+        # Se selecciona una oferta para retirar la solicitud
+        boton_retira_solicitud = self.selenium.find_element_by_xpath('//button[@id="button_retirar_solicitud_oferta_{}"]'.format(oferta.id))
+        boton_retira_solicitud.click()
+        # Se comprueba que se está en la página de detalles de la oferta
+        # Pero antes se tiene que esperar a que redirija a la página
+        wait_driver = WebDriverWait(self.selenium, 3)
+        wait_driver.until(lambda driv: driv.current_url == '{}/oferta/detalles/{}/'.format(self.live_server_url, oferta.id))
+        self.assertEqual('{}/oferta/detalles/{}/'.format(self.live_server_url, oferta.id), self.selenium.current_url)
+        # Se busca el mensaje de éxito y se comprueba que es correcto
+        message_success = self.selenium.find_element_by_class_name('alert-success')
+        self.assertEqual(message_success.text, 'Se ha retirado la solicitud con éxito')
+        # Se comprueba que se ha retirado la solicitud de la oferta
+        try:
+            solicitud = Solicitud.objects.get(usuario=usuario, oferta=oferta)
+        except ObjectDoesNotExist as e:
+            solicitud = None
+        self.assertIsNone(solicitud)
+        # El usuario se desloguea
+        self.logout()
+
+    def test_retira_solicitud_sin_solicitar(self):
+        # El usuario se loguea y se obtienen las variables que se van a usar en el test
+        usuario = self.login('usuario1', 'usuario1')
+        # Se busca una oferta que se pueda retirar, pero que no haya sido solicitaada por el usuario
+        oferta = None
+        solicitudes = list(Solicitud.objects.filter(oferta__vetada=False, oferta__borrador=False, oferta__cerrada=False))
+        for oferta_for in Oferta.objects.filter(vetada=False, borrador=False, cerrada=False):
+            oferta = oferta_for
+            for solicitud in solicitudes:
+                if solicitud.oferta == oferta:
+                    oferta = None
+                    break
+            if oferta != None:
+                break
+        # Se acccede a la url de retirada de ofertas
+        self.selenium.get('%s%s' % (self.live_server_url, '/oferta/retiro_solicitud/{}/'.format(oferta.id)))
+        # Se comprueba que se está en la página de detalles de la oferta
+        # Pero antes se tiene que esperar a que redirija a la página
+        wait_driver = WebDriverWait(self.selenium, 3)
+        wait_driver.until(
+            lambda driv: driv.current_url == '{}/oferta/detalles/{}/'.format(self.live_server_url, oferta.id))
+        self.assertEqual('{}/oferta/detalles/{}/'.format(self.live_server_url, oferta.id), self.selenium.current_url)
+        # Se busca el mensaje de éxito y se comprueba que es correcto
+        message_success = self.selenium.find_element_by_class_name('alert-danger')
+        self.assertEqual(message_success.text, 'No se puede retirar la solicitud de una oferta en la que no se tiene una solicitud')
+        # Se comprueba que no existe la solicitud de la oferta
+        try:
+            solicitud = Solicitud.objects.get(usuario=usuario, oferta=oferta)
+        except ObjectDoesNotExist as e:
+            solicitud = None
+        self.assertIsNone(solicitud)
+        # El usuario se desloguea
+        self.logout()
+
+    def test_retira_solicitud_oferta_vetada(self):
+        # El usuario se loguea y se obtienen las variables que se van a usar en el test
+        usuario = self.login('usuario2', 'usuario2')
+        # Se busca una oferta que se pueda retirar
+        oferta = Solicitud.objects.filter(oferta__vetada=True, oferta__borrador=False, oferta__cerrada=False).first().oferta
+        # Se acccede a la url de listado de ofertas
+        self.selenium.get('%s%s' % (self.live_server_url, '/oferta/retiro_solicitud/{}/'.format(oferta.id)))
+        # Se comprueba que se está en la página de detalles de la oferta
+        # Pero antes se tiene que esperar a que redirija a la página
+        wait_driver = WebDriverWait(self.selenium, 3)
+        wait_driver.until(
+            lambda driv: driv.current_url == '{}/oferta/detalles/{}/'.format(self.live_server_url, oferta.id))
+        self.assertEqual('{}/oferta/detalles/{}/'.format(self.live_server_url, oferta.id), self.selenium.current_url)
+        # Se busca el mensaje de éxito y se comprueba que es correcto
+        message_success = self.selenium.find_element_by_class_name('alert-danger')
+        self.assertEqual(message_success.text, 'No se puede retirar la solicitud de una oferta vetada')
+        # Se comprueba que no se ha retirado la solicitud de la oferta
+        try:
+            solicitud = Solicitud.objects.get(usuario=usuario, oferta=oferta)
+        except ObjectDoesNotExist as e:
+            solicitud = None
+        self.assertIsNotNone(solicitud)
+        # El usuario se desloguea
+        self.logout()
+
+    def test_retira_solicitud_oferta_cerrada(self):
+        # El usuario se loguea y se obtienen las variables que se van a usar en el test
+        usuario = self.login('usuario3', 'usuario3')
+        # Se busca una oferta que se pueda retirar
+        oferta = Solicitud.objects.filter(oferta__vetada=False, oferta__borrador=False, oferta__cerrada=True).first().oferta
+        # Se acccede a la url de listado de ofertas
+        self.selenium.get('%s%s' % (self.live_server_url, '/oferta/retiro_solicitud/{}/'.format(oferta.id)))
+        # Se comprueba que se está en la página de detalles de la oferta
+        # Pero antes se tiene que esperar a que redirija a la página
+        wait_driver = WebDriverWait(self.selenium, 3)
+        wait_driver.until(
+            lambda driv: driv.current_url == '{}/oferta/detalles/{}/'.format(self.live_server_url, oferta.id))
+        self.assertEqual('{}/oferta/detalles/{}/'.format(self.live_server_url, oferta.id),
+                         self.selenium.current_url)
+        # Se busca el mensaje de éxito y se comprueba que es correcto
+        message_success = self.selenium.find_element_by_class_name('alert-danger')
+        self.assertEqual(message_success.text, 'No se puede retirar la solicitud de una oferta que está cerrada')
+        # Se comprueba que no se ha retirado la solicitud de la oferta
+        try:
+            solicitud = Solicitud.objects.get(usuario=usuario, oferta=oferta)
+        except ObjectDoesNotExist as e:
+            solicitud = None
+        self.assertIsNotNone(solicitud)
+        # El usuario se desloguea
+        self.logout()
+
+    def test_retira_solicitud_oferta_sin_autenticar(self):
+        # Se inicializan las variables necesarias
+        numero_solicitudes_antes = Solicitud.objects.all().count()
+        # Se busca una oferta que se pueda retirar
+        oferta = Solicitud.objects.filter(oferta__vetada=False, oferta__borrador=False, oferta__cerrada=False).first().oferta
+        # Se acccede a la url de listado de ofertas
+        self.selenium.get('%s%s' % (self.live_server_url, '/oferta/retiro_solicitud/{}'.format(oferta.id)))
+        # Se comprueba que redirige a la página de login
+        self.assertEqual('{}/login/?next=/oferta/retiro_solicitud/{}/'.format(self.live_server_url, oferta.id), self.selenium.current_url)
+        # Se comprueba que no se ha retirado la solicitud de la oferta
+        numero_solicitudes_despues = Solicitud.objects.all().count()
+        self.assertEqual(numero_solicitudes_despues, numero_solicitudes_antes)
+        # El usuario se desloguea
+        self.logout()
+
+    def test_retira_solicitud_oferta_inexistente(self):
+        # El usuario se loguea y se obtienen las variables que se van a usar en el test
+        usuario = self.login('usuario1', 'usuario1')
+        # Se acccede a la url de retirada de ofertas
+        self.selenium.get('%s%s' % (self.live_server_url, '/oferta/retiro_solicitud/{}/'.format(0)))
+        # Se comprueba que se está en la página de listado de ofertas
+        self.assertEqual('{}/oferta/listado/'.format(self.live_server_url), self.selenium.current_url)
+        # Se busca el mensaje de éxito y se comprueba que es correcto
+        message_success = self.selenium.find_element_by_class_name('alert-danger')
+        self.assertEqual(message_success.text, 'No se ha encontrado la oferta')
+        # El usuario se desloguea
+        self.logout()

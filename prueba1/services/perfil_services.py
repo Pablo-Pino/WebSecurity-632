@@ -23,6 +23,10 @@ def registra_usuario(usuario_dict):
     usuario.empresa_u_equipo = usuario_dict['empresa_u_equipo']
     usuario.vetado = False
     usuario.es_admin = False
+    usuario.full_clean()
+    usuario.save()
+    usuario.actividades_realizadas.set([])
+    usuario.full_clean()
     usuario_registrado = usuario.save()
     return usuario_registrado
 
@@ -78,4 +82,3 @@ def elimina_anexo(anexo, usuario):
     if usuario.id != anexo.usuario.id:
         raise UnallowedUserException()
     anexo.delete()
-

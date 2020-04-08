@@ -6,7 +6,7 @@ from django.contrib.auth.hashers import make_password
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Q
 
-from prueba1.models.oferta_models import Oferta
+from prueba1.models.oferta_models import Oferta, Solicitud
 from prueba1.models.perfil_models import Usuario
 from prueba1.forms.oferta_forms import OfertaEdicionForm
 from prueba1.exceptions import UnallowedUserException
@@ -113,3 +113,18 @@ def levanta_veto_oferta(request, oferta):
     oferta.vetada = False
     oferta.full_clean()
     oferta.save(update_fields = ['motivo_veto', 'vetada'])
+
+@transaction.atomic
+def solicita_oferta(request, oferta):
+    usuario = Usuario.objects.get(django_user_id=request.user.id)
+    solicitud = Solicitud(
+        usuario=usuario,
+        oferta=oferta,
+    )
+    solicitud.save()
+
+@transaction.atomic
+def retira_solicitud_oferta(request, solicitud):
+    if not solicitud.usuario.django_user.id == request.user.id:
+        raise UnallowedUserException()
+    solicitud.delete()

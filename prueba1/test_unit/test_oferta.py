@@ -7,7 +7,7 @@ from datetime import date
 import re
 
 from prueba1.models.actividad_models import Actividad
-from prueba1.models.oferta_models import Oferta
+from prueba1.models.oferta_models import Oferta, Solicitud
 from prueba1.models.perfil_models import Usuario
 from prueba1.models.oferta_models import Oferta
 from prueba1.views.oferta_views import CreacionOfertaView
@@ -129,7 +129,7 @@ class OfertaTestCase(TestCase):
         password = 'usuario1'
         usuario = self.login(username, password)
         # Se sacan las variables necesarias para comparar los datos
-        numero_ofertas_antes = Oferta.objects.count()
+        numero_ofertas_antes = Oferta.objects.all().count()
         autor_esperado = Usuario.objects.get(django_user__username = 'usuario1')
         # Se asignan variables para los datos de entrada
         titulo = 'test_crea'
@@ -145,7 +145,7 @@ class OfertaTestCase(TestCase):
             'actividades': actividades_post
         })
         # Se obtienen las variables de salida
-        numero_ofertas_despues = Oferta.objects.count()
+        numero_ofertas_despues = Oferta.objects.all().count()
         oferta_creada = Oferta.objects.all().order_by('id').last()
         # Se comparan los datos, se comprueba que el usuario es redirigido a la página de detalles de la oferta
         # tras crearla
@@ -171,7 +171,7 @@ class OfertaTestCase(TestCase):
     # Un usuario crea una oferta sin estar autenticado
     def test_crea_oferta_sin_loguear(self):
         # Se sacan las variables necesarias para comparar los datos
-        numero_ofertas_antes = Oferta.objects.count()
+        numero_ofertas_antes = Oferta.objects.all().count()
         # Se asignan variables para los datos de entrada
         titulo = 'test_crea_sin_loguear'
         descripcion = 'test_crea_sin_loguear'
@@ -186,7 +186,7 @@ class OfertaTestCase(TestCase):
             'actividades': actividades_post,
         })
         # Se obtienen las varibles de salida
-        numero_ofertas_despues = Oferta.objects.count()
+        numero_ofertas_despues = Oferta.objects.all().count()
         # Se comparan los datos y se comprueba que no se ha creado la oferta, además de que el usuario ha sido
         # redirigido a la página de login al acceder a una página que requiere autenticación
         self.assertEqual(response.status_code, 302)
@@ -200,7 +200,7 @@ class OfertaTestCase(TestCase):
         password = 'usuario1'
         self.login(username, password)
         # Se sacan las variables necesarias para comparar los datos
-        numero_ofertas_antes = Oferta.objects.count()
+        numero_ofertas_antes = Oferta.objects.all().count()
         # Se asignan variables para los datos de entrada
         titulo = ''
         descripcion = 'test_crea_incorrecta'
@@ -214,7 +214,7 @@ class OfertaTestCase(TestCase):
             'actividades': actividades_post
         })
         # Se obtienen las varibles de salida
-        numero_ofertas_despues = Oferta.objects.count()
+        numero_ofertas_despues = Oferta.objects.all().count()
         # Se comparan los datos y se comprueba que no se ha creado la oferta, se debe comprobar además que se ha
         # obtenido la página sin redirección y que se ha obtenido correctamente, debido a que se permanece en el 
         # formulario al suceder un error de validación
@@ -230,7 +230,7 @@ class OfertaTestCase(TestCase):
         password = 'usuario1'
         self.login(username, password)
         # Se sacan las variables necesarias para comparar los datos
-        numero_ofertas_antes = Oferta.objects.count()
+        numero_ofertas_antes = Oferta.objects.all().count()
         # Se asignan variables para los datos de entrada
         titulo = 'test_crea_vetada'
         descripcion = 'test_crea_vetada'
@@ -247,7 +247,7 @@ class OfertaTestCase(TestCase):
             'actividades': actividades_post
         })
         # Se obtienen las varibles de salida
-        numero_ofertas_despues = Oferta.objects.count()
+        numero_ofertas_despues = Oferta.objects.all().count()
         # Se comparan los datos y se comprueba que no se ha creado la oferta, se debe comprobar además que se ha
         # obtenido la página sin redirección y que se ha obtenido correctamente, debido a que se permanece en el
         # formulario al suceder un error de validación
@@ -263,7 +263,7 @@ class OfertaTestCase(TestCase):
         password = 'usuario1'
         self.login(username, password)
         # Se sacan las variables necesarias para comparar los datos
-        numero_ofertas_antes = Oferta.objects.count()
+        numero_ofertas_antes = Oferta.objects.all().count()
         # Se asignan variables para los datos de entrada
         titulo = 'test_crea_vetada'
         descripcion = 'test_crea_vetada'
@@ -280,7 +280,7 @@ class OfertaTestCase(TestCase):
             'actividades': actividades_post
         })
         # Se obtienen las variables de salida
-        numero_ofertas_despues = Oferta.objects.count()
+        numero_ofertas_despues = Oferta.objects.all().count()
         # Se comparan los datos y se comprueba que no se ha creado la oferta, se debe comprobar además que se ha
         # obtenido la página sin redirección y que se ha obtenido correctamente, debido a que se permanece en el
         # formulario al suceder un error de validación
@@ -587,7 +587,7 @@ class OfertaTestCase(TestCase):
         username = 'usuario1'
         password = 'usuario1'
         oferta = Oferta.objects.filter(autor__django_user__username=username, borrador=True, cerrada=False).first()
-        numero_ofertas_antes = Oferta.objects.count()
+        numero_ofertas_antes = Oferta.objects.all().count()
         self.login(username, password)
         # Se realiza la petición para eliminar la oferta
         response = self.client.get('/oferta/eliminacion/{}/'.format(oferta.id))
@@ -599,7 +599,7 @@ class OfertaTestCase(TestCase):
             Oferta.objects.get(pk = oferta.id)
         except ObjectDoesNotExist as e:
             oferta_eliminada = True
-        numero_ofertas_despues = Oferta.objects.count()
+        numero_ofertas_despues = Oferta.objects.all().count()
         # Se comparan los datos. Se comprueba que el usuario ha sido redirigido al listado de ofertas y que la
         # oferta ha sido eliminada
         self.assertEqual(response.status_code, 302)
@@ -613,7 +613,7 @@ class OfertaTestCase(TestCase):
     def test_elimina_oferta_sin_loguear(self):
         # Se inicializan variables
         oferta = Oferta.objects.filter(borrador=True, cerrada=False).first()
-        numero_ofertas_antes = Oferta.objects.count()
+        numero_ofertas_antes = Oferta.objects.all().count()
         # Se realiza la petición para eliminar la oferta
         response = self.client.get('/oferta/eliminacion/{}/'.format(oferta.id))
         # Se obtienen las variables de salida. Se busca la oferta y se trata de capturar la excepción que se produce
@@ -624,7 +624,7 @@ class OfertaTestCase(TestCase):
             Oferta.objects.get(pk = oferta.id)
         except ObjectDoesNotExist as e:
             oferta_eliminada = True
-        numero_ofertas_despues = Oferta.objects.count()
+        numero_ofertas_despues = Oferta.objects.all().count()
         # Se comparan los datos. Se comprueba que el usuario, al tratar de acceder a una página que requiere 
         # autenticación sin estar autenticado, es redirigido a la página de login. Se comprueba además que no se ha 
         # eliminado la oferta
@@ -639,7 +639,7 @@ class OfertaTestCase(TestCase):
         username = 'usuario2'
         password = 'usuario2'
         oferta = Oferta.objects.exclude(autor__django_user__username=username).filter(borrador=True, cerrada=False).first()
-        numero_ofertas_antes = Oferta.objects.count()
+        numero_ofertas_antes = Oferta.objects.all().count()
         self.login(username, password)
         # Se realiza la petición para eliminar la oferta
         response = self.client.get('/oferta/eliminacion/{}/'.format(oferta.id))
@@ -651,7 +651,7 @@ class OfertaTestCase(TestCase):
             Oferta.objects.get(pk = oferta.id)
         except ObjectDoesNotExist as e:
             oferta_eliminada = True
-        numero_ofertas_despues = Oferta.objects.count()
+        numero_ofertas_despues = Oferta.objects.all().count()
         # Se comparan los datos. Se comprueba que el usuario ha sido redirigido a los detalles de la oferta y que no
         # se ha eliminado la oferta. Esto se debe a que un usuario no puede eliminar una oferta que no le pertenece.
         self.assertEqual(response.status_code, 302)
@@ -667,7 +667,7 @@ class OfertaTestCase(TestCase):
         username = 'usuario1'
         password = 'usuario1'
         oferta = Oferta.objects.filter(autor__django_user__username=username, borrador=False, cerrada=False).first()
-        numero_ofertas_antes = Oferta.objects.count()
+        numero_ofertas_antes = Oferta.objects.all().count()
         self.login(username, password)
         # Se realiza la petición para crear la oferta
         response = self.client.get('/oferta/eliminacion/{}/'.format(oferta.id))
@@ -679,7 +679,7 @@ class OfertaTestCase(TestCase):
             Oferta.objects.get(pk = oferta.id)
         except ObjectDoesNotExist as e:
             oferta_eliminada = True
-        numero_ofertas_despues = Oferta.objects.count()
+        numero_ofertas_despues = Oferta.objects.all().count()
         # Se comparan los datos
         self.assertEqual(response.status_code, 302)
         self.assertRedirects(response, '/oferta/detalles/{}/'.format(oferta.id))
@@ -1066,3 +1066,397 @@ class OfertaTestCase(TestCase):
         self.assertRedirects(response, '/oferta/listado/')
         # El usuario se desloguea
         self.logout()
+
+
+
+    # SOLICITUD
+
+    def test_solicita_oferta(self):
+        # Se inicializan variables y se loguea el usuario
+        username = 'usuario1'
+        password = 'usuario1'
+        usuario = self.login(username, password)
+        numero_solicitudes_antes = Solicitud.objects.all().count()
+        # Se busca una oferta para solicitarla
+        ofertas_solicitadas = []
+        for solicitud in list(Solicitud.objects.filter(usuario=usuario).only('oferta')):
+            ofertas_solicitadas.append(solicitud.oferta)
+        ofertas_posibles = []
+        for oferta_for in list(Oferta.objects.filter(borrador=False, vetada=False, cerrada=False)):
+            ofertas_posibles.append(oferta_for)
+        actividades_realizadas = Usuario.objects.get(pk=usuario.id).actividades_realizadas.all()
+        # Se comprueba que no se ha solicitado antes la oferta y que se han realizado las actividades necesarias
+        oferta = None
+        for oferta_posible in ofertas_posibles:
+            puede_solicitar = True
+            # Si no se ha solicitado al oferta antes
+            if not oferta_posible in ofertas_solicitadas:
+                # Comprueba que se han realizado las tareas anteriores
+                actividades_requisitos = oferta_posible.actividades.all()
+                for actividad_requisito in actividades_requisitos:
+                    if not actividad_requisito in actividades_realizadas:
+                        puede_solicitar = False
+                        break
+                if puede_solicitar:
+                    oferta = oferta_posible
+                    break
+        # Se realiza la petición para solicitar la oferta
+        response = self.client.get('/oferta/solicitud/{}/'.format(oferta.id))
+        # Se comparan los datos. Se comprueba que la oferta ha sido solicitada
+        numero_solicitudes_despues = Solicitud.objects.all().count()
+        self.assertEqual(response.status_code, 302)
+        self.assertRedirects(response, '/oferta/detalles/{}/'.format(oferta.id))
+        self.assertEqual(numero_solicitudes_antes + 1, numero_solicitudes_despues)
+        try:
+            solicitud_creada = Solicitud.objects.get(usuario=usuario, oferta=oferta)
+        except ObjectDoesNotExist as e:
+            solicitud_creada = None
+        self.assertIsNotNone(solicitud_creada)
+        # El usuario se desloguea
+        self.logout()
+
+    def test_solicita_oferta_sin_requisitos(self):
+        # Se inicializan variables y se loguea el usuario
+        username = 'usuario3'
+        password = 'usuario3'
+        usuario = self.login(username, password)
+        numero_solicitudes_antes = Solicitud.objects.all().count()
+        # Se busca una oferta para solicitarla
+        ofertas_solicitadas = []
+        for solicitud in list(Solicitud.objects.filter(usuario=usuario).only('oferta')):
+            ofertas_solicitadas.append(solicitud.oferta)
+        ofertas_posibles = []
+        for oferta in list(Oferta.objects.filter(borrador=False, vetada=False, cerrada=False)):
+            ofertas_posibles.append(oferta)
+        actividades_realizadas = Usuario.objects.get(pk=usuario.id).actividades_realizadas.all()
+        # Se comprueba que no se ha solicitado antes la oferta y que se han realizado las actividades necesarias
+        oferta = None
+        for oferta_posible in ofertas_posibles:
+            puede_solicitar = True
+            # Si no se ha solicitado al oferta antes
+            if not oferta_posible in ofertas_solicitadas:
+                # Comprueba que se han realizado las tareas anteriores
+                actividades_requisitos = oferta_posible.actividades.all()
+                for actividad_requisito in actividades_requisitos:
+                    if not actividad_requisito in actividades_realizadas:
+                        puede_solicitar = False
+                        break
+                # En este caso, coge una oferta cuyos requisitos no cumple
+                if not puede_solicitar:
+                    oferta = oferta_posible
+                    break
+        # Se realiza la petición para solicitar la oferta
+        response = self.client.get('/oferta/solicitud/{}/'.format(oferta.id))
+        # Se comparan los datos. Se comprueba que no se ha creado la solicitud
+        numero_solicitudes_despues = Solicitud.objects.all().count()
+        self.assertEqual(response.status_code, 302)
+        self.assertRedirects(response, '/oferta/detalles/{}/'.format(oferta.id))
+        self.assertEqual(numero_solicitudes_despues, numero_solicitudes_antes)
+        try:
+            solicitud_creada = Solicitud.objects.get(usuario=usuario, oferta=oferta)
+        except ObjectDoesNotExist as e:
+            solicitud_creada = None
+        self.assertIsNone(solicitud_creada)
+        # El usuario se desloguea
+        self.logout()
+
+    def test_solicita_oferta_borrador(self):
+        # Se inicializan variables y se loguea el usuario
+        username = 'usuario3'
+        password = 'usuario3'
+        usuario = self.login(username, password)
+        numero_solicitudes_antes = Solicitud.objects.all().count()
+        # Se busca una oferta para solicitarla, en este caso, la oferta va a estar en modo borrador
+        ofertas_solicitadas = []
+        for solicitud in list(Solicitud.objects.filter(usuario=usuario).only('oferta')):
+            ofertas_solicitadas.append(solicitud.oferta)
+        ofertas_posibles = []
+        for oferta in list(Oferta.objects.filter(borrador=True, vetada=False, cerrada=False)):
+            ofertas_posibles.append(oferta)
+        actividades_realizadas = Usuario.objects.get(pk=usuario.id).actividades_realizadas.all()
+        # Se comprueba que no se ha solicitado antes la oferta y que se han realizado las actividades necesarias
+        oferta = None
+        for oferta_posible in ofertas_posibles:
+            puede_solicitar = True
+            # Si no se ha solicitado al oferta antes
+            if not oferta_posible in ofertas_solicitadas:
+                # Comprueba que se han realizado las tareas anteriores
+                actividades_requisitos = oferta_posible.actividades.all()
+                for actividad_requisito in actividades_requisitos:
+                    if not actividad_requisito in actividades_realizadas:
+                        puede_solicitar = False
+                        break
+                if puede_solicitar:
+                    oferta = oferta_posible
+                    break
+        # Se realiza la petición para solicitar la oferta
+        response = self.client.get('/oferta/solicitud/{}/'.format(oferta.id))
+        # Se comparan los datos. Se comprueba que no se ha creado la solicitud
+        numero_solicitudes_despues = Solicitud.objects.all().count()
+        self.assertEqual(response.status_code, 302)
+        self.assertRedirects(response, '/oferta/detalles/{}/'.format(oferta.id))
+        self.assertEqual(numero_solicitudes_antes, numero_solicitudes_despues)
+        try:
+            solicitud_creada = Solicitud.objects.get(usuario=usuario, oferta=oferta)
+        except ObjectDoesNotExist as e:
+            solicitud_creada = None
+        self.assertIsNone(solicitud_creada)
+        # El usuario se desloguea
+        self.logout()
+
+    def test_solicita_oferta_cerrada(self):
+        # Se inicializan variables y se loguea el usuario
+        username = 'usuario1'
+        password = 'usuario1'
+        usuario = self.login(username, password)
+        numero_solicitudes_antes = Solicitud.objects.all().count()
+        # Se busca una oferta para solicitarla, en este caso, la oferta va a estar cerrada
+        ofertas_solicitadas = []
+        for solicitud in list(Solicitud.objects.filter(usuario=usuario)):
+            ofertas_solicitadas.append(solicitud.oferta)
+        ofertas_posibles = []
+        for oferta in list(Oferta.objects.filter(borrador=False, vetada=False, cerrada=True)):
+            ofertas_posibles.append(oferta)
+        actividades_realizadas = Usuario.objects.get(pk=usuario.id).actividades_realizadas.all()
+        # Se comprueba que no se ha solicitado antes la oferta y que se han realizado las actividades necesarias
+        oferta = None
+        for oferta_posible in ofertas_posibles:
+            puede_solicitar = True
+            # Si no se ha solicitado al oferta antes
+            if not oferta_posible in ofertas_solicitadas:
+                # Comprueba que se han realizado las tareas anteriores
+                actividades_requisitos = oferta_posible.actividades.all()
+                for actividad_requisito in actividades_requisitos:
+                    if not actividad_requisito in actividades_realizadas:
+                        puede_solicitar = False
+                        break
+                if puede_solicitar:
+                    oferta = oferta_posible
+                    break
+        # Se realiza la petición para solicitar la oferta
+        response = self.client.get('/oferta/solicitud/{}/'.format(oferta.id))
+        # Se comparan los datos. Se comprueba que no se ha creado la solicitud
+        numero_solicitudes_despues = Solicitud.objects.all().count()
+        self.assertEqual(response.status_code, 302)
+        self.assertRedirects(response, '/oferta/detalles/{}/'.format(oferta.id))
+        self.assertEqual(numero_solicitudes_antes, numero_solicitudes_despues)
+        try:
+            solicitud_creada = Solicitud.objects.get(usuario=usuario, oferta=oferta)
+        except ObjectDoesNotExist as e:
+            solicitud_creada = None
+        self.assertIsNone(solicitud_creada)
+        # El usuario se desloguea
+        self.logout()
+
+    def test_solicita_oferta_vetada(self):
+        # Se inicializan variables y se loguea el usuario
+        username = 'usuario1'
+        password = 'usuario1'
+        usuario = self.login(username, password)
+        numero_solicitudes_antes = Solicitud.objects.all().count()
+        # Se busca una oferta para solicitarla, en este caso, la oferta va a estar vetada
+        ofertas_solicitadas = []
+        for solicitud in list(Solicitud.objects.filter(usuario=usuario).only('oferta')):
+            ofertas_solicitadas.append(solicitud.oferta)
+        ofertas_posibles = []
+        for oferta in list(Oferta.objects.filter(borrador=False, vetada=True, cerrada=False)):
+            ofertas_posibles.append(oferta)
+        actividades_realizadas = Usuario.objects.get(pk=usuario.id).actividades_realizadas.all()
+        # Se comprueba que no se ha solicitado antes la oferta y que se han realizado las actividades necesarias
+        oferta = None
+        for oferta_posible in ofertas_posibles:
+            puede_solicitar = True
+            # Si no se ha solicitado al oferta antes
+            if not oferta_posible in ofertas_solicitadas:
+                # Comprueba que se han realizado las tareas anteriores
+                actividades_requisitos = oferta_posible.actividades.all()
+                for actividad_requisito in actividades_requisitos:
+                    if not actividad_requisito in actividades_realizadas:
+                        puede_solicitar = False
+                        break
+                if puede_solicitar:
+                    oferta = oferta_posible
+                    break
+        # Se realiza la petición para solicitar la oferta
+        response = self.client.get('/oferta/solicitud/{}/'.format(oferta.id))
+        # Se comparan los datos. Se comprueba que no se ha creado la solicitud
+        numero_solicitudes_despues = Solicitud.objects.all().count()
+        self.assertEqual(response.status_code, 302)
+        self.assertRedirects(response, '/oferta/detalles/{}/'.format(oferta.id))
+        self.assertEqual(numero_solicitudes_antes, numero_solicitudes_despues)
+        try:
+            solicitud_creada = Solicitud.objects.get(usuario=usuario, oferta=oferta)
+        except ObjectDoesNotExist as e:
+            solicitud_creada = None
+        self.assertIsNone(solicitud_creada)
+        # El usuario se desloguea
+        self.logout()
+    
+    def test_solicita_oferta_sin_autenticar(self):
+        # Se inicializan variables
+        numero_solicitudes_antes = Solicitud.objects.all().count()
+        # Se busca una oferta para solicitarla, en este caso, la oferta va a estar en modo borrador
+        ofertas_posibles = []
+        for oferta in list(Oferta.objects.filter(borrador=False, vetada=False, cerrada=False)):
+            ofertas_posibles.append(oferta)
+        oferta = ofertas_posibles[0]
+        # Se realiza la petición para solicitar la oferta
+        response = self.client.get('/oferta/solicitud/{}/'.format(oferta.id))
+        # Se comparan los datos. Se comprueba que no se ha creado la solicitud
+        numero_solicitudes_despues = Solicitud.objects.all().count()
+        self.assertEqual(response.status_code, 302)
+        self.assertRedirects(response, '/login/?next=/oferta/solicitud/{}/'.format(oferta.id))
+        self.assertEqual(numero_solicitudes_antes, numero_solicitudes_despues)
+
+    def test_solicita_oferta_inexistente(self):
+        # Se inicializan variables y se loguea el usuario
+        username = 'usuario1'
+        password = 'usuario1'
+        usuario = self.login(username, password)
+        numero_solicitudes_antes = Solicitud.objects.all().count()
+        # Se realiza la petición para solicitar la oferta poniendo una oferta que no existe
+        response = self.client.get('/oferta/solicitud/0/')
+        # Se comparan los datos. Se comprueba que la oferta ha sido solicitada
+        numero_solicitudes_despues = Solicitud.objects.all().count()
+        self.assertEqual(response.status_code, 302)
+        self.assertRedirects(response, '/oferta/listado/')
+        self.assertEqual(numero_solicitudes_antes, numero_solicitudes_despues)
+        # El usuario se desloguea
+        self.logout()
+
+
+
+    # RETIRO DE SOLICITUD
+
+    def test_retira_solicitud(self):
+        # Se inicializan variables y se loguea el usuario
+        username = 'usuario1'
+        password = 'usuario1'
+        usuario = self.login(username, password)
+        numero_solicitudes_antes = Solicitud.objects.all().count()
+        # Se busca una solicitud para retirarla
+        oferta = Solicitud.objects.filter(usuario=usuario, oferta__vetada=False, oferta__cerrada=False, oferta__borrador=False).only('oferta').first().oferta
+        # Se realiza la petición para retirar la solicitud de la oferta
+        response = self.client.get('/oferta/retiro_solicitud/{}/'.format(oferta.id))
+        # Se comparan los datos. Se comprueba que la solicitud ha sido retirada
+        numero_solicitudes_despues = Solicitud.objects.all().count()
+        self.assertEqual(response.status_code, 302)
+        self.assertRedirects(response, '/oferta/detalles/{}/'.format(oferta.id))
+        self.assertEqual(numero_solicitudes_antes - 1, numero_solicitudes_despues)
+        try:
+            solicitud = Solicitud.objects.get(usuario=usuario, oferta=oferta)
+        except ObjectDoesNotExist as e:
+            solicitud = None
+        self.assertIsNone(solicitud)
+        # El usuario se desloguea
+        self.logout()
+
+    def test_retira_solicitud_sin_solicitar(self):
+        # Se inicializan variables y se loguea el usuario
+        username = 'usuario1'
+        password = 'usuario1'
+        usuario = self.login(username, password)
+        numero_solicitudes_antes = Solicitud.objects.all().count()
+        # Se busca una oferta donde el usuario no haya solicitado
+        ofertas = []
+        for solicitud in list(
+            Solicitud.objects.filter(usuario=usuario, oferta__vetada=False, oferta__cerrada=False).only('oferta')):
+            ofertas.append(solicitud.oferta)
+        for oferta_for in Oferta.objects.all():
+            if not oferta_for in ofertas:
+                oferta = oferta_for
+        # Se realiza la petición para retirar la solicitud de la oferta
+        response = self.client.get('/oferta/retiro_solicitud/{}/'.format(oferta.id))
+        # Se comparan los datos. Se comprueba que la solicitud ha sido retirada
+        numero_solicitudes_despues = Solicitud.objects.all().count()
+        self.assertEqual(response.status_code, 302)
+        self.assertRedirects(response, '/oferta/detalles/{}/'.format(oferta.id))
+        self.assertEqual(numero_solicitudes_antes, numero_solicitudes_despues)
+        try:
+            solicitud = Solicitud.objects.get(usuario=usuario, oferta=oferta)
+        except ObjectDoesNotExist as e:
+            solicitud = None
+        self.assertIsNone(solicitud)
+        # El usuario se desloguea
+        self.logout()
+
+    def test_retira_solicitud_oferta_vetada(self):
+        # Se inicializan variables y se loguea el usuario
+        username = 'usuario1'
+        password = 'usuario1'
+        usuario = self.login(username, password)
+        numero_solicitudes_antes = Solicitud.objects.all().count()
+        # Se busca una solicitud para retirarla
+        oferta = Solicitud.objects.filter(usuario=usuario, oferta__vetada=True, oferta__cerrada=False,
+                oferta__borrador=False).only('oferta').first().oferta
+        # Se realiza la petición para retirar la solicitud de la oferta
+        response = self.client.get('/oferta/retiro_solicitud/{}/'.format(oferta.id))
+        # Se comparan los datos. Se comprueba que la solicitud no ha sido retirada
+        numero_solicitudes_despues = Solicitud.objects.all().count()
+        self.assertEqual(response.status_code, 302)
+        self.assertRedirects(response, '/oferta/detalles/{}/'.format(oferta.id))
+        self.assertEqual(numero_solicitudes_antes, numero_solicitudes_despues)
+        try:
+            solicitud = Solicitud.objects.get(usuario=usuario, oferta=oferta)
+        except ObjectDoesNotExist as e:
+            solicitud = None
+        self.assertIsNotNone(solicitud)
+        # El usuario se desloguea
+        self.logout()
+
+    def test_retira_solicitud_oferta_cerrada(self):
+        # Se inicializan variables y se loguea el usuario
+        username = 'usuario3'
+        password = 'usuario3'
+        usuario = self.login(username, password)
+        numero_solicitudes_antes = Solicitud.objects.all().count()
+        # Se busca una solicitud para retirarla
+        oferta = Solicitud.objects.filter(usuario=usuario, oferta__vetada=False, oferta__cerrada=True,
+                oferta__borrador=False).only('oferta').first().oferta
+        # Se realiza la petición para retirar la solicitud de la oferta
+        response = self.client.get('/oferta/retiro_solicitud/{}/'.format(oferta.id))
+        # Se comparan los datos. Se comprueba que la solicitud no ha sido retirada
+        numero_solicitudes_despues = Solicitud.objects.all().count()
+        self.assertEqual(response.status_code, 302)
+        self.assertRedirects(response, '/oferta/detalles/{}/'.format(oferta.id))
+        self.assertEqual(numero_solicitudes_antes, numero_solicitudes_despues)
+        try:
+            solicitud = Solicitud.objects.get(usuario=usuario, oferta=oferta)
+        except ObjectDoesNotExist as e:
+            solicitud = None
+        self.assertIsNotNone(solicitud)
+        # El usuario se desloguea
+        self.logout()
+
+    def test_retira_solicitud_oferta_sin_autenticar(self):
+        # Se inicializan variables y se loguea el usuario
+        numero_solicitudes_antes = Solicitud.objects.all().count()
+        # Se busca una solicitud para retirarla
+        oferta = Solicitud.objects.filter(oferta__vetada=False, oferta__cerrada=False, oferta__borrador=False
+                ).only('oferta').first().oferta
+        # Se realiza la petición para retirar la solicitud de la oferta
+        response = self.client.get('/oferta/retiro_solicitud/{}/'.format(oferta.id))
+        # Se comparan los datos. Se comprueba que la solicitud ha sido retirada
+        numero_solicitudes_despues = Solicitud.objects.all().count()
+        self.assertEqual(response.status_code, 302)
+        self.assertRedirects(response, '/login/?next=/oferta/retiro_solicitud/{}/'.format(oferta.id))
+        self.assertEqual(numero_solicitudes_antes, numero_solicitudes_despues)
+        # El usuario se desloguea
+        self.logout()
+
+    def test_retira_solicitud_oferta_inexistente(self):
+        # Se inicializan variables y se loguea el usuario
+        username = 'usuario1'
+        password = 'usuario1'
+        usuario = self.login(username, password)
+        numero_solicitudes_antes = Solicitud.objects.all().count()
+        # Se realiza la petición para retirar la solicitud de la oferta
+        response = self.client.get('/oferta/retiro_solicitud/{}/'.format(0))
+        # Se comparan los datos. Se comprueba que la solicitud ha sido retirada
+        numero_solicitudes_despues = Solicitud.objects.all().count()
+        self.assertEqual(response.status_code, 302)
+        self.assertRedirects(response, '/oferta/listado/')
+        self.assertEqual(numero_solicitudes_antes, numero_solicitudes_despues)
+        # El usuario se desloguea
+        self.logout()
+    
