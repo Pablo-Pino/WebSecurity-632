@@ -23,6 +23,13 @@ def lista_ofertas(request):
         return Oferta.objects.exclude((Q(cerrada=True) | Q(borrador=True) | Q(vetada=True)) & ~Q(autor=usuario))
 
 @transaction.atomic
+def lista_ofertas_propias(request):
+    if not request.user.is_authenticated:
+        raise Exception('Se debe estar autenticado para listar las ofertas')
+    usuario = Usuario.objects.get(django_user__id=request.user.id)
+    return Oferta.objects.filter(autor=usuario).order_by('id')
+
+@transaction.atomic
 def crea_oferta(oferta_dict, request):
     if not request.user.is_authenticated:
         raise Exception('Se debe estar autenticado para crear una oferta')

@@ -3,12 +3,30 @@ from django.db import transaction
 from datetime import date
 from random import choice
 from django.contrib.auth.hashers import make_password
+from django.db.models import Q
 
 from prueba1.models.actividad_models import Actividad
 from prueba1.models.perfil_models import Usuario
 from prueba1.forms.actividad_forms import ActividadEdicionForm
 from prueba1.exceptions import UnallowedUserException
 from prueba1.services.util_services import genera_identificador
+
+@transaction.atomic
+def listado_actividades(request):
+    if not request.user.is_authenticated:
+        raise Exception('Se debe estar autenticado para listar las actividades')
+    usuario = Usuario.objects.get(django_user__id=request.user.id)
+    if usuario.es_admin:
+        return Actividad.objects.exclude(Q(borrador=True) & ~Q(autor=usuario))
+    else:
+        return Actividad.objects.exclude((Q(borrador=True) | Q(vetada=True)) & ~Q(autor=usuario))
+
+@transaction.atomic
+def listado_actividades_propias(request):
+    if not request.user.is_authenticated:
+        raise Exception('Se debe estar autenticado para listar las actividades')
+    usuario = Usuario.objects.get(django_user__id=request.user.id)
+    return Actividad.objects.filter(autor=usuario).order_by('id')
 
 @transaction.atomic
 def crea_actividad(actividad_dict, request):

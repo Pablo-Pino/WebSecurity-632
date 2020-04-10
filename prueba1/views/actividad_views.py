@@ -12,24 +12,45 @@ from prueba1.exceptions import UnallowedUserException
 from prueba1.forms.actividad_forms import ActividadCreacionForm, ActividadEdicionForm, ActividadVetoForm
 from prueba1.models.actividad_models import Actividad
 from prueba1.models.perfil_models import Usuario
-from prueba1.services.actividad_services import crea_actividad, edita_actividad, elimina_actividad, veta_actividad, levanta_veto_actividad, actividad_formulario
+from prueba1.services.actividad_services import crea_actividad, edita_actividad, elimina_actividad, veta_actividad, \
+        levanta_veto_actividad, actividad_formulario, listado_actividades, listado_actividades_propias
 
 
-class ListadoActividadesView(View):
+class ListadoActividadesView(LoginRequiredMixin, View):
     # No se requieren permisos para visitar esta pagina
     template_name = 'actividad/listado_actividades.html'
 
     def get(self, request):
         context = {}
-        # Se obtienen todas las actividades
-        actividades = Actividad.objects.all()
         # Se consulta que usuario esta autenticado en este momento
         try:
             usuario = Usuario.objects.get(django_user_id = request.user.id)
         except ObjectDoesNotExist:
             usuario = None
         # Se añaden al contexto las actividades y el usuario y se muestra el listado
-        context.update({'actividades': actividades, 'usuario': usuario})
+        context.update({
+            'actividades': listado_actividades(request),
+            'usuario': usuario,
+            'actividades_realizadas': usuario.actividades_realizadas.all(),
+        })
+        return render(request, self.template_name, context)
+
+class ListadoActividadesPropiasView(LoginRequiredMixin, View):
+    # No se requieren permisos para visitar esta pagina
+    template_name = 'actividad/listado_actividades.html'
+
+    def get(self, request):
+        context = {}
+        # Se consulta que usuario esta autenticado en este momento
+        try:
+            usuario = Usuario.objects.get(django_user_id = request.user.id)
+        except ObjectDoesNotExist:
+            usuario = None
+        # Se añaden al contexto las actividades y el usuario y se muestra el listado
+        context.update({
+            'actividades': listado_actividades_propias(request),
+            'usuario': usuario
+        })
         return render(request, self.template_name, context)
 
 class CreacionActividadesView(LoginRequiredMixin, View):
@@ -235,7 +256,7 @@ class EliminacionActividadesView(LoginRequiredMixin, View):
         messages.success(request, 'Se ha eliminado la actividad con exito')
         return HttpResponseRedirect(reverse('actividad_listado'))        
 
-class DetallesActividadesView(View):
+class DetallesActividadesView(LoginRequiredMixin, View):
     # No se requiere estar autenticado para visitar esta página
     template_name = 'actividad/detalles_actividades.html'
 
@@ -253,10 +274,19 @@ class DetallesActividadesView(View):
         # listado de actividades
         except ObjectDoesNotExist as e:
             return actividad_no_hallada(request)
+        # En caso de que la actividad no pertenezca al usuario y esté en modo borrador, entonces se redirige al usuario
+        # al listado de actividades, indicando que no puede acceder a los detalles de la actividad
+        if actividad.borrador and actividad.autor != usuario:
+            messages.error(request, 'No se tienen los permisos necesarios para acceder a la actividad')
+            return HttpResponseRedirect(reverse('actividad_listado'))
+        actividad_realizada = False
+        if actividad in usuario.actividades_realizadas.all():
+            actividad_realizada = True
         # Se añaden al contexto la actividad y el usuario
         context.update({
             'actividad': actividad,
             'usuario': usuario,
+            'actividad_realizada': actividad_realizada,
         })
         # Se muestra la vista de detalles
         return render(request, self.template_name, context)

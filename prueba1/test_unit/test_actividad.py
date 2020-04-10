@@ -49,27 +49,48 @@ class ActividadTestCase(TestCase):
         # El usuario se desloguea
         self.logout()
 
-        # Un administrador accede al listado de actividades correctamente
-        def test_lista_actividades_admin(self):
-            # Se inicializan variables y el usuario se loguea
-            username = 'usuario2'
-            password = 'usuario2'
-            self.login(username, password)
-            # Se crean variables con los datos correctos
-            usuario_esperado = Usuario.objects.get(django_user__username=username)
-            actividades_esperadas = list(Actividad.objects.filter(Q(autor__django_user__username=username) |
-                    Q(borrador=False)).order_by('id'))
-            # Se simula una petición al listado de la actividad
-            response = self.client.get('/actividad/listado/')
-            # Se obtienen los resultados
-            usuario_recibido = response.context['usuario']
-            actividades_recibidas = list(response.context['actividades'].order_by('id'))
-            # Se comprueba que los resultados son correctos
-            self.assertEqual(response.status_code, 200)
-            self.assertEqual(actividades_esperadas, actividades_recibidas)
-            self.assertEqual(usuario_esperado, usuario_recibido)
-            # El usuario se desloguea
-            self.logout()
+    # Un administrador accede al listado de actividades correctamente
+    def test_lista_actividades_admin(self):
+        # Se inicializan variables y el usuario se loguea
+        username = 'usuario2'
+        password = 'usuario2'
+        self.login(username, password)
+        # Se crean variables con los datos correctos
+        usuario_esperado = Usuario.objects.get(django_user__username=username)
+        actividades_esperadas = list(Actividad.objects.filter(Q(autor__django_user__username=username) |
+                Q(borrador=False)).order_by('id'))
+        # Se simula una petición al listado de la actividad
+        response = self.client.get('/actividad/listado/')
+        # Se obtienen los resultados
+        usuario_recibido = response.context['usuario']
+        actividades_recibidas = list(response.context['actividades'].order_by('id'))
+        # Se comprueba que los resultados son correctos
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(actividades_esperadas, actividades_recibidas)
+        self.assertEqual(usuario_esperado, usuario_recibido)
+        # El usuario se desloguea
+        self.logout()
+
+    # Un administrador accede al listado de actividades correctamente
+    def test_lista_actividades_propias(self):
+        # Se inicializan variables y el usuario se loguea
+        username = 'usuario2'
+        password = 'usuario2'
+        usuario = self.login(username, password)
+        # Se crean variables con los datos correctos
+        usuario_esperado = Usuario.objects.get(django_user__username=username)
+        actividades_esperadas = list(Actividad.objects.filter(autor=usuario).order_by('id'))
+        # Se simula una petición al listado de la actividad
+        response = self.client.get('/actividad/listado_propio/')
+        # Se obtienen los resultados
+        usuario_recibido = response.context['usuario']
+        actividades_recibidas = list(response.context['actividades'].order_by('id'))
+        # Se comprueba que los resultados son correctos
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(actividades_esperadas, actividades_recibidas)
+        self.assertEqual(usuario_esperado, usuario_recibido)
+        # El usuario se desloguea
+        self.logout()
 
     # Un usuario accede a los detalles de una actividad correctamente
     def test_detalles_actividad(self):
@@ -301,10 +322,12 @@ class ActividadTestCase(TestCase):
             'borrador': borrador
         })
         actividad_despues = Actividad.objects.get(pk = actividad.id)
-        # Se comparan los datos y se comprueba que el usuario ha sido redirigido a la página de detalles de la 
-        # actividad. Esto se debe a que no puede editar una actividad que no le pertenece.
+        # Se comparan los datos y se comprueba que el usuario ha sido redirigido a la página de listado de las
+        # actividades. Esto se debe a que no puede editar una actividad que no le pertenece y no puede acceder
+        # a los detalles de una actividad ajena en modo borrador
         self.assertEqual(response.status_code, 302)
-        self.assertRedirects(response, '/actividad/detalles/{}/'.format(actividad.id))
+        # Se indica que se espera un codigo 302 en la respuesta debido  otra redireccion
+        self.assertRedirects(response, '/actividad/detalles/{}/'.format(actividad.id), target_status_code=302)
         # Se comprueba que no se ha editado ninguno de los campos editables
         self.assertEqual(actividad_despues.titulo, actividad.titulo)
         self.assertEqual(actividad_despues.descripcion, actividad.descripcion)
@@ -336,7 +359,7 @@ class ActividadTestCase(TestCase):
             'borrador': borrador
         })
         actividad_despues = Actividad.objects.get(pk = actividad.id)
-        # Se comparan los datos y se comprueba que el usuario ha sido redirigido a la página de detalles de la 
+        # Se comparan los datos y se comprueba que el usuario ha sido redirigido a la página de detalles de la
         # actividad. Esto se debe a que no puede editar una actividad que no está en modo borrador.
         self.assertEqual(response.status_code, 302)
         self.assertRedirects(response, '/actividad/detalles/{}/'.format(actividad.id))
@@ -454,10 +477,12 @@ class ActividadTestCase(TestCase):
         except ObjectDoesNotExist as e:
             actividad_eliminada = True
         numero_actividades_despues = Actividad.objects.count()
-        # Se comparan los datos. Se comprueba que el usuario ha sido redirigido a los detalles de la actividad y que no
-        # se ha eliminado la actividad. Esto se debe a que un usuario no puede eliminar una actividad que no le pertenece.
+        # Se comparan los datos. Se comprueba que el usuario ha sido redirigido al listado de las actividades y que no
+        # se ha eliminado la actividad. Esto se debe a que un usuario no puede eliminar una actividad que no le
+        # pertenece y y no puede acceder a los detalles de una actividad ajena en modo borrador
         self.assertEqual(response.status_code, 302)
-        self.assertRedirects(response, '/actividad/detalles/{}/'.format(actividad.id))
+        # Se indica que se espera un codigo 302 en la respuesta debido  otra redireccion
+        self.assertRedirects(response, '/actividad/detalles/{}/'.format(actividad.id), target_status_code=302)
         self.assertEqual(numero_actividades_antes, numero_actividades_despues)
         self.assertEqual(actividad_eliminada, False)
         # El usuario se desloguea
@@ -620,9 +645,12 @@ class ActividadTestCase(TestCase):
         # Se obtienen las variables de salida
         actividad_despues = Actividad.objects.get(pk = actividad.id)
         # Se comparan los datos. Se comprueba que la actividad no ha sufrido cambios y que el usuario ha sido
-        # redirigido a los detalles de la actividad puesto a que no se puede vetar una actividad en modo borrador 
+        # redirigido a los detalles de la actividad puesto a que no se puede vetar una actividad en modo borrador y
+        # y no puede acceder a los detalles de una actividad ajena en modo borrador
         self.assertEqual(response.status_code, 302)
-        self.assertRedirects(response, reverse('actividad_detalles', kwargs = {'actividad_id': actividad.id}))
+        # Debido a que la redirección termina con otra redirección, se debe indicar que se espera un status code 302
+        self.assertRedirects(response, reverse('actividad_detalles', kwargs = {'actividad_id': actividad.id}),
+            target_status_code=302)
         self.assertEqual(actividad_despues.vetada, False)
         self.assertEqual(actividad_despues.motivo_veto, None)
         # El usuario se desloguea
@@ -718,24 +746,6 @@ class ActividadTestCase(TestCase):
         self.assertRedirects(response, '/actividad/listado/')
         # El usuario se desloguea
         self.logout()
-    
-    # Un usuario levanta el veto sobre una actividad en modo borrador
-    def test_levanta_veto_actividad_borrador(self):
-        # Se inicializan variables y se loguea el usuario
-        username = 'usuario2'
-        password = 'usuario2'
-        actividad = Actividad.objects.filter(Q(vetada = True) & Q(borrador = True)).first()
-        self.login(username, password)
-        # Se realiza la petición para levantar el veto sobre la actividad
-        response = self.client.get('/actividad/levantamiento_veto/{}/'.format(actividad.id))
-        # Se obtienen las variables de salida
-        actividad_despues = Actividad.objects.get(pk = actividad.id)
-        # Se comparan los datos. Se comprueba que la actividad no ha sufrido cambios y que el usuario ha sido redirigido
-        # a los detalles de la actividad puesto a que no se puede levantar el veto sobre una actividad en modo borrador.
-        self.assertEqual(response.status_code, 302)
-        self.assertRedirects(response, reverse('actividad_detalles', kwargs = {'actividad_id': actividad.id}))
-        self.assertEqual(actividad_despues.vetada, True)
-        self.assertEqual(actividad.motivo_veto, actividad_despues.motivo_veto)
-        # El usuario se desloguea
-        self.logout()
+
+
 

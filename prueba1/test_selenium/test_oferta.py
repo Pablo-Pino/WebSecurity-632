@@ -52,7 +52,7 @@ class OfertaTestCase(StaticLiveServerTestCase):
         self.selenium.get('%s%s' % (self.live_server_url, '/logout'))
 
 
-
+    
     # TESTS DE LISTADO
     
     # Un usuario que no es administrador accede al listado de ofertas
@@ -67,7 +67,7 @@ class OfertaTestCase(StaticLiveServerTestCase):
         ofertas_mostradas = self.selenium.find_elements_by_tag_name('tr')
         self.assertEqual(len(ofertas_esperadas), len(ofertas_mostradas) - 1)
         # Se comprueba que el contenido de la tabla es correcto
-        self.evaluar_columnas_listado_oferta(ofertas_esperadas, usuario)
+        self.evaluar_columnas_listado_oferta(ofertas_esperadas, usuario, False)
         # Se cierra sesion
         self.logout()
 
@@ -83,17 +83,36 @@ class OfertaTestCase(StaticLiveServerTestCase):
         ofertas_mostradas = self.selenium.find_elements_by_tag_name('tr')
         self.assertEqual(len(ofertas_esperadas), len(ofertas_mostradas) - 1)
         # Se comprueba que el contenido de la tabla es correcto
-        self.evaluar_columnas_listado_oferta(ofertas_esperadas, usuario)
+        self.evaluar_columnas_listado_oferta(ofertas_esperadas, usuario, False)
         # Se cierra sesion
         self.logout()
 
-    def evaluar_columnas_listado_oferta(self, oferta_esperadas, usuario):
+    # Un usuario que accede al listado de ofertas propias
+    def test_listado_ofertas_propias(self):
+         # Se accede al listado de oferta como el usuario1
+         self.login('usuario1', 'usuario1')
+         # Se accede al listado de ofertas propias
+         self.selenium.get('%s%s' % (self.live_server_url, '/oferta/listado_propio'))
+         # Se comprueba que aparecen las ofertas correctas
+         usuario = Usuario.objects.get(django_user__username='usuario1')
+         ofertas_esperadas = Oferta.objects.filter(autor=usuario).distinct().order_by('id')
+         ofertas_mostradas = self.selenium.find_elements_by_tag_name('tr')
+         self.assertEqual(len(ofertas_esperadas), len(ofertas_mostradas) - 1)
+         # Se comprueba que el contenido de la tabla es correcto
+         self.evaluar_columnas_listado_oferta(ofertas_esperadas, usuario, True)
+         # Se cierra sesion
+         self.logout()
+
+    def evaluar_columnas_listado_oferta(self, oferta_esperadas, usuario, listado_propio):
         i = 2
         ofertas = []
-        if usuario.es_admin:
-            ofertas = list(Oferta.objects.exclude((Q(cerrada=True) | Q(borrador=True)) & ~Q(autor=usuario)))
+        if listado_propio:
+            ofertas = Oferta.objects.filter(autor=usuario).distinct().order_by('id')
         else:
-            ofertas = list(Oferta.objects.exclude((Q(cerrada=True) | Q(borrador=True) | Q(vetada=True)) & ~Q(autor=usuario)))
+            if usuario.es_admin:
+                ofertas = list(Oferta.objects.exclude((Q(cerrada=True) | Q(borrador=True)) & ~Q(autor=usuario)))
+            else:
+                ofertas = list(Oferta.objects.exclude((Q(cerrada=True) | Q(borrador=True) | Q(vetada=True)) & ~Q(autor=usuario)))
         ofertas_solicitables = []
         ofertas_retirables = []
         ofertas_solicitadas = []
@@ -113,6 +132,14 @@ class OfertaTestCase(StaticLiveServerTestCase):
                     ofertas_solicitables.append(oferta)
         # Por cada una de las oferta que debe aparecer
         for oferta in oferta_esperadas:
+            # Se comprueba el backgorund-color de las filas
+            fila = self.selenium.find_element_by_xpath('//tr[{}]'.format(i))
+            # Si la oferta está cerrada o vetaada el background color el rojizo
+            if oferta.vetada or oferta.cerrada:
+                self.assertEqual(fila.value_of_css_property('background-color'), 'rgba(255, 0, 0, 0.4)')
+            # Si el usuario puede solicitar la oferta, entonces el background es verdoso
+            elif oferta in ofertas_solicitables and not listado_propio:
+                self.assertEqual(fila.value_of_css_property('background-color'), 'rgba(0, 255, 0, 0.4)')
             # Se comprueba el título
             titulo = self.selenium.find_element_by_xpath('//tbody/child::tr[{}]/child::td[1]'.format(i)).text
             self.assertEqual(titulo, oferta.titulo)
@@ -195,32 +222,34 @@ class OfertaTestCase(StaticLiveServerTestCase):
             except NoSuchElementException:
                 boton_levanta_veto = False
             self.assertEqual(usuario.es_admin and not oferta.borrador and oferta.vetada, boton_levanta_veto)
-            # Se comprueba que está el botón de solicitar la oferta, si procede
-            existe_boton_solicitud = True
-            try:
-                boton_solicitud = self.selenium.find_element_by_xpath('//tbody/child::tr[{}]/child::td[{}]/child::button'.format(i, j))
-                if oferta in ofertas_solicitables:
-                    self.assertEqual(boton_solicitud.get_attribute('id'), 'button_solicitar_oferta_{}'.format(oferta.id))
-                    j = j + 1
-                else:
-                    self.assertEqual(boton_solicitud.get_attribute('id') == 'button_solicitar_oferta_{}'.format(oferta.id), False)
+            # Si no es el listado de ofertas propias, pueden aparecer los botones relacionados con las solicitudes
+            if not listado_propio:
+                # Se comprueba que está el botón de solicitar la oferta, si procede
+                existe_boton_solicitud = True
+                try:
+                    boton_solicitud = self.selenium.find_element_by_xpath('//tbody/child::tr[{}]/child::td[{}]/child::button'.format(i, j))
+                    if oferta in ofertas_solicitables:
+                        self.assertEqual(boton_solicitud.get_attribute('id'), 'button_solicitar_oferta_{}'.format(oferta.id))
+                        j = j + 1
+                    else:
+                        self.assertEqual(boton_solicitud.get_attribute('id') == 'button_solicitar_oferta_{}'.format(oferta.id), False)
+                        existe_boton_solicitud = False
+                except NoSuchElementException:
                     existe_boton_solicitud = False
-            except NoSuchElementException:
-                existe_boton_solicitud = False
-            self.assertEqual(oferta in ofertas_solicitables, existe_boton_solicitud)
-            # Se comprueba que está el botón de retirar la oferta, si procede
-            existe_boton_retiro_solicitud = True
-            try:
-                boton_retiro_solicitud = self.selenium.find_element_by_xpath('//tbody/child::tr[{}]/child::td[{}]/child::button'.format(i, j))
-                if oferta in ofertas_retirables:
-                    self.assertEqual(boton_retiro_solicitud.get_attribute('id'), 'button_retirar_solicitud_oferta_{}'.format(oferta.id))
-                    j = j + 1
-                else:
-                    self.assertEqual(boton_retiro_solicitud.get_attribute('id') == 'button_retirar_solicitud_oferta_{}'.format(oferta.id), False)
+                self.assertEqual(oferta in ofertas_solicitables, existe_boton_solicitud)
+                # Se comprueba que está el botón de retirar la oferta, si procede
+                existe_boton_retiro_solicitud = True
+                try:
+                    boton_retiro_solicitud = self.selenium.find_element_by_xpath('//tbody/child::tr[{}]/child::td[{}]/child::button'.format(i, j))
+                    if oferta in ofertas_retirables:
+                        self.assertEqual(boton_retiro_solicitud.get_attribute('id'), 'button_retirar_solicitud_oferta_{}'.format(oferta.id))
+                        j = j + 1
+                    else:
+                        self.assertEqual(boton_retiro_solicitud.get_attribute('id') == 'button_retirar_solicitud_oferta_{}'.format(oferta.id), False)
+                        existe_boton_retiro_solicitud = False
+                except NoSuchElementException:
                     existe_boton_retiro_solicitud = False
-            except NoSuchElementException:
-                existe_boton_retiro_solicitud = False
-            self.assertEqual(oferta in ofertas_retirables, existe_boton_retiro_solicitud)
+                self.assertEqual(oferta in ofertas_retirables, existe_boton_retiro_solicitud)
             i = i + 1
 
 
@@ -268,6 +297,14 @@ class OfertaTestCase(StaticLiveServerTestCase):
         self.logout()
     
     # Un usuario accede a los detalles de una oferta cerrada
+    def test_detalles_oferta_cerrada(self):
+        # El usuario se loguea y se inicializan las variables más relevantes
+        usuario = self.login('usuario1', 'usuario1')
+        oferta = Oferta.objects.filter(borrador=False, vetada=False, cerrada=True).first()
+        # Se comprueban que los datos mostrados son correctos
+        self.detalles_oferta(oferta, usuario)
+        # El usuario se desloguea
+        self.logout()
 
     # Un usuario accede a los detalles de una de sus ofertas en modo borrador
     def test_detalles_oferta_propia_borrador(self):
@@ -289,16 +326,25 @@ class OfertaTestCase(StaticLiveServerTestCase):
         # El usuario se desloguea
         self.logout()
 
+    '''
+
     # Un usuario accede a los detalles de una oferta ajena en modo borrador
     def test_detalles_oferta_ajena_borrador(self):
         # El usuario se loguea y se inicializan las variables más relevantes
         usuario = self.login('usuario1', 'usuario1')
         oferta = Oferta.objects.filter(borrador=True, cerrada=False, vetada=False).exclude(autor=usuario).first()
-        # Se comprueban que los datos mostrados son correctos
-        self.detalles_oferta(oferta, usuario)
+        # Se accede a los detalles de la oferta
+        self.selenium.get('{}{}'.format(self.live_server_url, '/oferta/detalles/{}'.format(oferta.id)))
+        # Se comprueba que el usuario ha sido redirigido al listado de ofertas con un mensaje de error
+        self.assertEqual('{}/oferta/listado/'.format(self.live_server_url), self.selenium.current_url)
+        # Se comprueba que el mensaje de error se muestra correctamente
+        message_success = self.selenium.find_element_by_class_name('alert-danger')
+        self.assertEqual(message_success.text, 'No se tienen los permisos necesarios para acceder a la oferta')
         # El usuario se desloguea
         self.logout()
 
+    '''
+    
     # Un usuario accede a los detalles de una oferta ajena en modo no borrador
     def test_detalles_oferta_ajena_no_borrador(self):
         # El usuario se loguea y se inicializan las variables más relevantes
@@ -362,7 +408,6 @@ class OfertaTestCase(StaticLiveServerTestCase):
             self.assertEqual(aviso_vetada.text, 'VETADA')
             self.assertEqual(str(aviso_vetada.value_of_css_property('color')), 'rgb(255, 0, 0)')
         except Exception as e:
-            print(e.args)
             existe_aviso_veto = False
         self.assertEqual(oferta.vetada, existe_aviso_veto)
         # Se comprueba que si está cerrada, se indica con un texto en rojo
@@ -573,8 +618,6 @@ class OfertaTestCase(StaticLiveServerTestCase):
             '//input[@id="id_titulo"]/following::div[@class="invalid-feedback"][1]')
         error_descripcion = self.selenium.find_element_by_xpath(
             '//input[@id="id_descripcion"]/following::div[@class="invalid-feedback"][1]')
-        print(self.selenium.find_elements_by_xpath(
-            '//div[@class="invalid-feedback"]'))
         error_actividades = self.selenium.find_element_by_xpath(
             '//select[@id="id_actividades"]/following::div[@class="invalid-feedback"][1]')
         self.assertEqual(error_titulo.text, 'Este campo es requerido.')
@@ -589,6 +632,101 @@ class OfertaTestCase(StaticLiveServerTestCase):
         self.selenium.get('%s%s' % (self.live_server_url, '/oferta/creacion'))
         # Se verifica que se ha redirigido al usuario a la página de login, puesto a que no está autenticado
         self.assertEqual(self.selenium.current_url, self.live_server_url + '/login/?next=/oferta/creacion/')
+
+    # Un usuario crea una oferta introduciendo una actividad en modo borrador
+    def test_creacion_oferta_actividad_borrador(self):
+        # El usuario se loguea
+        self.login('usuario1', 'usuario1')
+        # Se obtienen variables necesarias para el test
+        usuario = Usuario.objects.get(django_user__username='usuario1')
+        # Se obtiene la actividad en modo borrador que se va a introducir en lugar de la actividad correcta
+        actividad_borrador = Actividad.objects.filter(borrador=True).first()
+        # Se accede a la edición de la oferta
+        self.selenium.get('%s%s' % (self.live_server_url, '/oferta/creacion/'))
+        # Se comprueba que el título de la página es correcto
+        title_text = self.selenium.find_element_by_tag_name('h1').text
+        self.assertEqual('Creacion de ofertas' in title_text, True)
+        # Se rellenan los campos del formulario
+        input_descripcion = self.selenium.find_element_by_id('id_descripcion')
+        input_titulo = self.selenium.find_element_by_id('id_titulo')
+        input_actividades = self.selenium.find_element_by_id('id_actividades')
+        options_actividades = input_actividades.find_elements_by_tag_name('option')
+        # Se comprueba que ninguna de las actividades que aparecen en el select está vetada o en modo borrador
+        for option in options_actividades:
+            id_actividad = option.get_attribute('value')
+            actividad = Actividad.objects.get(pk=id_actividad)
+            self.assertFalse(actividad.borrador or actividad.vetada)
+        input_descripcion.clear()
+        input_descripcion.send_keys('descripcioneditada')
+        input_titulo.clear()
+        input_titulo.send_keys('tituloeditado')
+        # Se seleccionan varias actividades del select para añadirlas a la oferta
+        option = options_actividades[0]
+        self.script_cambiar_id_actividad_option(option, actividad_borrador)
+        ActionChains(self.selenium).key_down(Keys.LEFT_CONTROL).click(option).key_up(Keys.LEFT_CONTROL).perform()
+        # Se envía el formulario
+        input_submit = self.selenium.find_element_by_xpath('//input[@type="submit"]')
+        input_submit.click()
+        # Se comprueba que el usuario permanece en el formulario
+        self.assertEqual('{}/oferta/creacion/'.format(self.live_server_url), self.selenium.current_url)
+        # Se comprueba que el mensaje de error se muestra correctamente
+        message_success = self.selenium.find_element_by_class_name('alert-danger')
+        self.assertEqual(message_success.text, 'Se ha producido un error al crear la oferta')
+        # Se comprueba que el mensaje de validacion aparece correctamente
+        error_actividades = self.selenium.find_element_by_xpath(
+            '//select[@id="id_actividades"]/following::div[@class="invalid-feedback"][1]')
+        self.assertEqual(error_actividades.text,
+            'Escoja una opción válida. {} no es una de las opciones disponibles.'.format(actividad_borrador.id))
+        # El usuario se desloguea
+        self.logout()
+
+    # Un usuario crea una oferta introduciendo una actividad vetada
+    def test_creacion_oferta_actividad_vetada(self):
+        # El usuario se loguea
+        self.login('usuario1', 'usuario1')
+        # Se obtienen variables necesarias para el test
+        usuario = Usuario.objects.get(django_user__username='usuario1')
+        oferta = Oferta.objects.filter(Q(autor=usuario) & Q(borrador=True) & Q(vetada=False)).first()
+        # Se obtiene la actividad vetada que se va a introducir en lugar de la actividad correcta
+        actividad_vetada = Actividad.objects.filter(vetada=True).first()
+        # Se accede a la edición de la oferta
+        self.selenium.get('%s%s' % (self.live_server_url, '/oferta/creacion/'))
+        # Se comprueba que el título de la página es correcto
+        title_text = self.selenium.find_element_by_tag_name('h1').text
+        self.assertEqual('Creacion de ofertas' in title_text, True)
+        # Se rellenan los campos del formulario
+        input_descripcion = self.selenium.find_element_by_id('id_descripcion')
+        input_titulo = self.selenium.find_element_by_id('id_titulo')
+        input_actividades = self.selenium.find_element_by_id('id_actividades')
+        options_actividades = input_actividades.find_elements_by_tag_name('option')
+        # Se comprueba que ninguna de las actividades que aparecen en el select está vetada o en modo borrador
+        for option in options_actividades:
+            id_actividad = option.get_attribute('value')
+            actividad = Actividad.objects.get(pk=id_actividad)
+            self.assertFalse(actividad.borrador or actividad.vetada)
+        input_descripcion.clear()
+        input_descripcion.send_keys('descripcioneditada')
+        input_titulo.clear()
+        input_titulo.send_keys('tituloeditado')
+        # Se seleccionan varias actividades del select para añadirlas a la oferta
+        option = options_actividades[0]
+        self.script_cambiar_id_actividad_option(option, actividad_vetada)
+        ActionChains(self.selenium).key_down(Keys.LEFT_CONTROL).click(option).key_up(Keys.LEFT_CONTROL).perform()
+        # Se envía el formulario
+        input_submit = self.selenium.find_element_by_xpath('//input[@type="submit"]')
+        input_submit.click()
+        # Se comprueba que el usuario permanece en el formulario
+        self.assertEqual('{}/oferta/creacion/'.format(self.live_server_url), self.selenium.current_url)
+        # Se comprueba que el mensaje de error se muestra correctamente
+        message_success = self.selenium.find_element_by_class_name('alert-danger')
+        self.assertEqual(message_success.text, 'Se ha producido un error al crear la oferta')
+        # Se comprueba que el mensaje de validacion aparece correctamente
+        error_actividades = self.selenium.find_element_by_xpath(
+            '//select[@id="id_actividades"]/following::div[@class="invalid-feedback"][1]')
+        self.assertEqual(error_actividades.text,
+            'Escoja una opción válida. {} no es una de las opciones disponibles.'.format(actividad_vetada.id))
+        # El usuario se desloguea
+        self.logout()
 
 
 
@@ -689,8 +827,9 @@ class OfertaTestCase(StaticLiveServerTestCase):
         oferta = Oferta.objects.exclude(autor=usuario).filter(borrador=True).first()
         # Se accede a la edición de la oferta
         self.selenium.get('%s%s' % (self.live_server_url, '/oferta/edicion/{}/'.format(oferta.id)))
-        # Se comprueba que el usuario ha sido redirigido a los detalles de la oferta
-        self.assertEqual(self.selenium.current_url, self.live_server_url + '/oferta/detalles/{}/'.format(oferta.id))
+        # Se comprueba que el usuario ha sido redirigido al listado de ofertas, puesto a que no puede acceder a los
+        # detalles de la oferta, por ser ajena y en borrador
+        self.assertEqual(self.selenium.current_url, self.live_server_url + '/oferta/listado/')
         # Se comprueba que se muestra el mensaje de error correctamente
         message_danger = self.selenium.find_element_by_class_name('alert-danger')
         self.assertEqual(message_danger.text, 'No se poseen los permisos necesarios para editar la oferta')
@@ -710,6 +849,225 @@ class OfertaTestCase(StaticLiveServerTestCase):
         # Se comprueba que se muestra el mensaje de error correctamente
         message_danger = self.selenium.find_element_by_class_name('alert-danger')
         self.assertEqual(message_danger.text, 'No se puede editar una oferta que no está en modo borrador')
+        # El usuario se desloguea
+        self.logout()
+
+    # Un usuario edita una oferta introduciendo una actividad en modo borrador
+    def test_editar_oferta_actividad_borrador(self):
+        # El usuario se loguea
+        self.login('usuario1', 'usuario1')
+        # Se obtienen variables necesarias para el test
+        usuario = Usuario.objects.get(django_user__username='usuario1')
+        oferta = Oferta.objects.filter(Q(autor=usuario) & Q(borrador=True) & Q(vetada=False)).first()
+        # Se obtiene la actividad en modo borrador que se va a introducir en lugar de la actividad correcta
+        actividad_borrador = Actividad.objects.filter(borrador=True).first()
+        # Se accede a la edición de la oferta
+        self.selenium.get('%s%s' % (self.live_server_url, '/oferta/edicion/{}/'.format(oferta.id)))
+        # Se comprueba que el título de la página es correcto
+        title_text = self.selenium.find_element_by_tag_name('h1').text
+        self.assertEqual('Edicion de ofertas' in title_text, True)
+        # Se rellenan los campos del formulario
+        input_descripcion = self.selenium.find_element_by_id('id_descripcion')
+        input_titulo = self.selenium.find_element_by_id('id_titulo')
+        input_borrador = self.selenium.find_element_by_id('id_borrador')
+        input_actividades = self.selenium.find_element_by_id('id_actividades')
+        options_actividades = input_actividades.find_elements_by_tag_name('option')
+        # Se comprueba que ninguna de las actividades que aparecen en el select está vetada o en modo borrador
+        for option in options_actividades:
+            id_actividad = option.get_attribute('value')
+            actividad = Actividad.objects.get(pk=id_actividad)
+            self.assertFalse(actividad.borrador or actividad.vetada)
+        input_descripcion.clear()
+        input_descripcion.send_keys('descripcioneditada')
+        input_titulo.clear()
+        input_titulo.send_keys('tituloeditado')
+        # Se seleccionan varias actividades del select para añadirlas a la oferta
+        option = options_actividades[0]
+        self.script_cambiar_id_actividad_option(option, actividad_borrador)
+        ActionChains(self.selenium).key_down(Keys.LEFT_CONTROL).click(option).key_up(Keys.LEFT_CONTROL).perform()
+        # Se envía el formulario
+        input_submit = self.selenium.find_element_by_xpath('//input[@type="submit"]')
+        input_submit.click()
+        # Se comprueba que el usuario permanece en el formulario
+        self.assertEqual('{}/oferta/edicion/{}/'.format(self.live_server_url, oferta.id),
+                         self.selenium.current_url)
+        # Se comprueba que el mensaje de error se muestra correctamente
+        message_success = self.selenium.find_element_by_class_name('alert-danger')
+        self.assertEqual(message_success.text, 'Se ha producido un error al editar la oferta')
+        # Se comprueba que el mensaje de validacion aparece correctamente
+        error_actividades = self.selenium.find_element_by_xpath(
+            '//select[@id="id_actividades"]/following::div[@class="invalid-feedback"][1]')
+        self.assertEqual(error_actividades.text,
+                         'Escoja una opción válida. {} no es una de las opciones disponibles.'.format(
+                             actividad_borrador.id
+                         ))
+        # El usuario se desloguea
+        self.logout()
+
+    # Un usuario edita una oferta introduciendo una actividad vetada
+    def test_editar_oferta_actividad_vetada(self):
+        # El usuario se loguea
+        self.login('usuario1', 'usuario1')
+        # Se obtienen variables necesarias para el test
+        usuario = Usuario.objects.get(django_user__username='usuario1')
+        oferta = Oferta.objects.filter(Q(autor=usuario) & Q(borrador=True) & Q(vetada=False)).first()
+        # Se obtiene la actividad vetada que se va a introducir en lugar de la actividad correcta
+        actividad_vetada = Actividad.objects.filter(vetada=True).first()
+        # Se accede a la edición de la oferta
+        self.selenium.get('%s%s' % (self.live_server_url, '/oferta/edicion/{}/'.format(oferta.id)))
+        # Se comprueba que el título de la página es correcto
+        title_text = self.selenium.find_element_by_tag_name('h1').text
+        self.assertEqual('Edicion de ofertas' in title_text, True)
+        # Se rellenan los campos del formulario
+        input_descripcion = self.selenium.find_element_by_id('id_descripcion')
+        input_titulo = self.selenium.find_element_by_id('id_titulo')
+        input_borrador = self.selenium.find_element_by_id('id_borrador')
+        input_actividades = self.selenium.find_element_by_id('id_actividades')
+        options_actividades = input_actividades.find_elements_by_tag_name('option')
+        # Se comprueba que ninguna de las actividades que aparecen en el select está vetada o en modo borrador
+        for option in options_actividades:
+            id_actividad = option.get_attribute('value')
+            actividad = Actividad.objects.get(pk=id_actividad)
+            self.assertFalse(actividad.borrador or actividad.vetada)
+        input_descripcion.clear()
+        input_descripcion.send_keys('descripcioneditada')
+        input_titulo.clear()
+        input_titulo.send_keys('tituloeditado')
+        # Se seleccionan varias actividades del select para añadirlas a la oferta
+        option = options_actividades[0]
+        self.script_cambiar_id_actividad_option(option, actividad_vetada)
+        ActionChains(self.selenium).key_down(Keys.LEFT_CONTROL).click(option).key_up(Keys.LEFT_CONTROL).perform()
+        # Se envía el formulario
+        input_submit = self.selenium.find_element_by_xpath('//input[@type="submit"]')
+        input_submit.click()
+        # Se comprueba que el usuario permanece en el formulario
+        self.assertEqual('{}/oferta/edicion/{}/'.format(self.live_server_url, oferta.id),
+                         self.selenium.current_url)
+        # Se comprueba que el mensaje de error se muestra correctamente
+        message_success = self.selenium.find_element_by_class_name('alert-danger')
+        self.assertEqual(message_success.text, 'Se ha producido un error al editar la oferta')
+        # Se comprueba que el mensaje de validacion aparece correctamente
+        error_actividades = self.selenium.find_element_by_xpath(
+            '//select[@id="id_actividades"]/following::div[@class="invalid-feedback"][1]')
+        self.assertEqual(error_actividades.text,
+            'Escoja una opción válida. {} no es una de las opciones disponibles.'.format(actividad_vetada.id))
+        # El usuario se desloguea
+        self.logout()
+
+    # Un usuario edita una oferta introduciendo una actividad en modo borrador
+    def test_editar_oferta_actividad_borrador(self):
+        # El usuario se loguea
+        self.login('usuario1', 'usuario1')
+        # Se obtienen variables necesarias para el test
+        usuario = Usuario.objects.get(django_user__username='usuario1')
+        oferta = Oferta.objects.filter(Q(autor=usuario) & Q(borrador=True) & Q(vetada=False)).first()
+        # Se obtiene la actividad en modo borrador que se va a introducir en lugar de la actividad correcta
+        actividad_borrador = Actividad.objects.filter(borrador=True).first()
+        # Se accede a la edición de la oferta
+        self.selenium.get('%s%s' % (self.live_server_url, '/oferta/edicion/{}/'.format(oferta.id)))
+        # Se comprueba que el título de la página es correcto
+        title_text = self.selenium.find_element_by_tag_name('h1').text
+        self.assertEqual('Edicion de ofertas' in title_text, True)
+        # Se rellenan los campos del formulario
+        input_descripcion = self.selenium.find_element_by_id('id_descripcion')
+        input_titulo = self.selenium.find_element_by_id('id_titulo')
+        input_borrador = self.selenium.find_element_by_id('id_borrador')
+        input_actividades = self.selenium.find_element_by_id('id_actividades')
+        options_actividades = input_actividades.find_elements_by_tag_name('option')
+        # Se comprueba que ninguna de las actividades que aparecen en el select está vetada o en modo borrador
+        for option in options_actividades:
+            id_actividad = option.get_attribute('value')
+            actividad = Actividad.objects.get(pk=id_actividad)
+            self.assertFalse(actividad.borrador or actividad.vetada)
+        input_descripcion.clear()
+        input_descripcion.send_keys('descripcioneditada')
+        input_titulo.clear()
+        input_titulo.send_keys('tituloeditado')
+        # Se seleccionan varias actividades del select para añadirlas a la oferta
+        option = options_actividades[0]
+        self.script_cambiar_id_actividad_option(option, actividad_borrador)
+        ActionChains(self.selenium).key_down(Keys.LEFT_CONTROL).click(option).key_up(Keys.LEFT_CONTROL).perform()
+        # Se envía el formulario
+        input_submit = self.selenium.find_element_by_xpath('//input[@type="submit"]')
+        input_submit.click()
+        # Se comprueba que el usuario permanece en el formulario
+        self.assertEqual('{}/oferta/edicion/{}/'.format(self.live_server_url, oferta.id),
+                         self.selenium.current_url)
+        # Se comprueba que el mensaje de error se muestra correctamente
+        message_success = self.selenium.find_element_by_class_name('alert-danger')
+        self.assertEqual(message_success.text, 'Se ha producido un error al editar la oferta')
+        # Se comprueba que el mensaje de validacion aparece correctamente
+        error_actividades = self.selenium.find_element_by_xpath(
+            '//select[@id="id_actividades"]/following::div[@class="invalid-feedback"][1]')
+        self.assertEqual(error_actividades.text, 'Escoja una opción válida. {} no es una de las opciones disponibles.'.format(
+            actividad_borrador.id
+        ))
+        # El usuario se desloguea
+        self.logout()
+
+    # Un usuario edita una oferta introduciendo una actividad vetada
+    def test_editar_oferta_actividad_vetada(self):
+        # El usuario se loguea
+        self.login('usuario1', 'usuario1')
+        # Se obtienen variables necesarias para el test
+        usuario = Usuario.objects.get(django_user__username='usuario1')
+        oferta = Oferta.objects.filter(Q(autor=usuario) & Q(borrador=True) & Q(vetada=False)).first()
+        # Se obtiene la actividad vetada que se va a introducir en lugar de la actividad correcta
+        actividad_vetada = Actividad.objects.filter(vetada=True).first()
+        # Se accede a la edición de la oferta
+        self.selenium.get('%s%s' % (self.live_server_url, '/oferta/edicion/{}/'.format(oferta.id)))
+        # Se comprueba que el título de la página es correcto
+        title_text = self.selenium.find_element_by_tag_name('h1').text
+        self.assertEqual('Edicion de ofertas' in title_text, True)
+        # Se rellenan los campos del formulario
+        input_descripcion = self.selenium.find_element_by_id('id_descripcion')
+        input_titulo = self.selenium.find_element_by_id('id_titulo')
+        input_borrador = self.selenium.find_element_by_id('id_borrador')
+        input_actividades = self.selenium.find_element_by_id('id_actividades')
+        options_actividades = input_actividades.find_elements_by_tag_name('option')
+        # Se comprueba que ninguna de las actividades que aparecen en el select está vetada o en modo borrador
+        for option in options_actividades:
+            id_actividad = option.get_attribute('value')
+            actividad = Actividad.objects.get(pk=id_actividad)
+            self.assertFalse(actividad.borrador or actividad.vetada)
+        input_descripcion.clear()
+        input_descripcion.send_keys('descripcioneditada')
+        input_titulo.clear()
+        input_titulo.send_keys('tituloeditado')
+        # Se seleccionan varias actividades del select para añadirlas a la oferta
+        option = options_actividades[0]
+        self.script_cambiar_id_actividad_option(option, actividad_vetada)
+        ActionChains(self.selenium).key_down(Keys.LEFT_CONTROL).click(option).key_up(Keys.LEFT_CONTROL).perform()
+        # Se envía el formulario
+        input_submit = self.selenium.find_element_by_xpath('//input[@type="submit"]')
+        input_submit.click()
+        # Se comprueba que el usuario permanece en el formulario
+        self.assertEqual('{}/oferta/edicion/{}/'.format(self.live_server_url, oferta.id),
+                         self.selenium.current_url)
+        # Se comprueba que el mensaje de error se muestra correctamente
+        message_success = self.selenium.find_element_by_class_name('alert-danger')
+        self.assertEqual(message_success.text, 'Se ha producido un error al editar la oferta')
+        # Se comprueba que el mensaje de validacion aparece correctamente
+        error_actividades = self.selenium.find_element_by_xpath(
+            '//select[@id="id_actividades"]/following::div[@class="invalid-feedback"][1]')
+        self.assertEqual(error_actividades.text, 'Escoja una opción válida. {} no es una de las opciones disponibles.'.format(
+            actividad_vetada.id
+        ))
+        # El usuario se desloguea
+        self.logout()
+
+    # Un usuario trata de editar una oferta que no existe
+    def test_editar_oferta_inexistente(self):
+        # Se loguea el usuario
+        usuario = self.login('usuario1', 'usuario1')
+        # Se accede a la edición de la oferta
+        self.selenium.get('%s%s' % (self.live_server_url, '/oferta/edicion/{}/'.format(0)))
+        # Se comprueba que se ha redirigido al usuario a la página de listado de ofertas, puesto a que se le redirige
+        # desde la página de detalles, que no puede mostrar los detalles de una oferta que no existe.
+        self.assertEqual(self.selenium.current_url, self.live_server_url + '/oferta/listado/')
+        # Se comprueba que se muestra el mensaje de error correctamente
+        message_danger = self.selenium.find_element_by_class_name('alert-danger')
+        self.assertEqual(message_danger.text, 'No se ha encontrado la oferta')
         # El usuario se desloguea
         self.logout()
 
@@ -754,6 +1112,7 @@ class OfertaTestCase(StaticLiveServerTestCase):
 
         # Un usuario elimina una oferta, pero cancela la eliminación
 
+    # Un usuario va a eliminar uan oferta, pero lo cancela
     def test_eliminar_oferta_sin_aceptar(self):
         # El usuario se loguea
         usuario = self.login('usuario1', 'usuario1')
@@ -803,8 +1162,9 @@ class OfertaTestCase(StaticLiveServerTestCase):
         oferta = Oferta.objects.filter(borrador=True).exclude(autor=usuario).first()
         # Se accede a la eliminación de la oferta
         self.selenium.get('%s%s' % (self.live_server_url, '/oferta/eliminacion/{}/'.format(oferta.id)))
-        # Se comprueba que el usuario ha sido redirigido a los detalles de la oferta
-        self.assertEqual(self.selenium.current_url, self.live_server_url + '/oferta/detalles/{}/'.format(oferta.id))
+        # Se comprueba que el usuario ha sido redirigido al listado de ofertas, puesto a que no puede acceder a los
+        # detalles de una actividad ajena en modo borrador
+        self.assertEqual(self.selenium.current_url, self.live_server_url + '/oferta/listado/')
         # Se comprueba que el mensaje de error se muestra correctamente
         message_danger = self.selenium.find_element_by_class_name('alert-danger')
         self.assertEqual(message_danger.text, 'No se poseen los permisos necesarios para editar la oferta')
@@ -827,8 +1187,23 @@ class OfertaTestCase(StaticLiveServerTestCase):
         # El usuario se desloguea
         self.logout()
 
+    # Un usuario trata de eliminar una oferta que no existe
+    def test_eliminar_oferta_inexistente(self):
+        # Se loguea el usuario
+        usuario = self.login('usuario1', 'usuario1')
+        # Se accede a la eliminación de la oferta
+        self.selenium.get('%s%s' % (self.live_server_url, '/oferta/eliminacion/{}/'.format(0)))
+        # Se comprueba que se ha redirigido al usuario a la página de listado de ofertas, puesto a que se le redirige
+        # desde la página de detalles, que no puede mostrar los detalles de una oferta que no existe.
+        self.assertEqual(self.selenium.current_url, self.live_server_url + '/oferta/listado/')
+        # Se comprueba que se muestra el mensaje de error correctamente
+        message_danger = self.selenium.find_element_by_class_name('alert-danger')
+        self.assertEqual(message_danger.text, 'No se ha encontrado la oferta')
+        # El usuario se desloguea
+        self.logout()
 
 
+    
     # TESTS VETO
 
     # Un admnistrador trata de vetar una oferta
@@ -1654,3 +2029,12 @@ class OfertaTestCase(StaticLiveServerTestCase):
         self.assertEqual(message_success.text, 'No se ha encontrado la oferta')
         # El usuario se desloguea
         self.logout()
+        
+
+
+    # METODOS AUXILIARES
+
+    def script_cambiar_id_actividad_option(self, option, actividad_despues):
+        self.selenium.execute_script('''
+            arguments[0].value = {};
+            '''.format(actividad_despues.id), option)

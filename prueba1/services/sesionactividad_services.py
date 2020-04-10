@@ -32,7 +32,9 @@ def añade_actividad_realizada(request, actividad):
         raise Exception('Se debe estar autenticado para realizar una actividad')
     # No se puede considerar realizada una actividad si no está en modo borrador
     if not actividad.borrador:
-        usuario = request.user
-        usuario.actividades_realizadas.append(actividad)
+        usuario = Usuario.objects.get(django_user = request.user)
+        actividades_realizadas = list(usuario.actividades_realizadas.all())
+        actividades_realizadas.append(actividad)
+        usuario.actividades_realizadas.set(actividades_realizadas)
         usuario.save()
 

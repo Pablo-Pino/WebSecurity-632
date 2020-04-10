@@ -15,9 +15,12 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
-from prueba1.views.actividad_views import ListadoActividadesView, CreacionActividadesView, EdicionActividadesView, EliminacionActividadesView, DetallesActividadesView, VetoActividadesView, LevantamientoVetoActividadesView
+from prueba1.views.actividad_views import ListadoActividadesView, CreacionActividadesView, EdicionActividadesView, \
+    EliminacionActividadesView, DetallesActividadesView, VetoActividadesView, LevantamientoVetoActividadesView, \
+    ListadoActividadesPropiasView
 from prueba1.views.oferta_views import ListadoOfertaView, CreacionOfertaView, DetallesOfertaView, EdicionOfertaView, \
-    EliminacionOfertaView, VetoOfertaView, LevantamientoVetoOfertaView, CierreOfertaView, SolicitudOfertaView, RetiroSolicitudOfertaView
+    EliminacionOfertaView, VetoOfertaView, LevantamientoVetoOfertaView, CierreOfertaView, SolicitudOfertaView, \
+    RetiroSolicitudOfertaView, ListadoOfertaPropiaView
 from prueba1.views.perfil_views import RegistroUsuarioView, DetallesPerfilView, EdicionPerfilView, CreacionAnexoView, EdicionAnexoView, EliminacionAnexoView
 from prueba1.views.sesionactividad_views import SesionActividadComienzo, SesionActividadFinal
 from prueba1.views.views import EjercicioMock1View, EjercicioMock2View, EjercicioMock3View
@@ -37,6 +40,7 @@ urlpatterns = [
     path('logout/', auth_views.LogoutView.as_view(next_page='/')),
     path('', HomeView.as_view(), name = 'home'),
     path('actividad/listado/', ListadoActividadesView.as_view(), name = 'actividad_listado'),
+    path('actividad/listado_propio/', ListadoActividadesPropiasView.as_view(), name = 'actividad_listado_propio'),
     path('actividad/creacion/', CreacionActividadesView.as_view(), name='actividad_creacion'),
     path('actividad/edicion/<int:actividad_id>/', EdicionActividadesView.as_view(), name='actividad_edicion'),
     path('actividad/eliminacion/<int:actividad_id>/', EliminacionActividadesView.as_view(), name='actividad_eliminacion'),
@@ -46,6 +50,7 @@ urlpatterns = [
     path('perfil/detalles/', DetallesPerfilView.as_view(), name = 'perfil_detalles'),
     path('perfil/edicion/', EdicionPerfilView.as_view(), name = 'perfil_edicion'),
     path('oferta/listado/', ListadoOfertaView.as_view(), name='oferta_listado'),
+    path('oferta/listado_propio/', ListadoOfertaPropiaView.as_view(), name='oferta_listado_propio'),
     path('oferta/creacion/', CreacionOfertaView.as_view(), name='oferta_creacion'),
     path('oferta/edicion/<int:oferta_id>/', EdicionOfertaView.as_view(), name='oferta_edicion'),
     path('oferta/detalles/<int:oferta_id>/', DetallesOfertaView.as_view(), name='oferta_detalles'),

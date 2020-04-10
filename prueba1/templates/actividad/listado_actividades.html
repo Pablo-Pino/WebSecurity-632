@@ -17,7 +17,13 @@
                 {% if not a.autor == usuario and a.borrador %}
                 {% elif not a.borrador and a.vetada and not a.autor == usuario and not usuario.es_admin %}
                 {% else %}
+                {% if a.vetada %}
+                    <tr style="background-color:rgba(255, 0, 0, 0.4);">
+                {% elif a in actividades_realizadas %}
+                    <tr style="background-color:rgba(0, 255, 0, 0.4);">
+                {% else %}
                     <tr>
+                {% endif %}
                         <td>{{ a.titulo }}</td>
                         <td>{{ a.descripcion }}</td>
                         <td>{{ a.fecha_creacion | date:"SHORT_DATE_FORMAT" }}</td>

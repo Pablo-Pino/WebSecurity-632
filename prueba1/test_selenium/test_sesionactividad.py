@@ -158,18 +158,19 @@ class SesionActividadTestCase(StaticLiveServerTestCase):
         # Se comprueba que se ha notificado al usuario que la actividad ha terminado correctamente
         alerta_exito = self.selenium.find_element_by_class_name('alert-success')
         self.assertEquals(alerta_exito.text, 'Se ha realizado correctamente la actividad')
+        self.assertTrue(actividad in usuario.actividades_realizadas.all())
         # El usuario se desloguea
         self.logout()
 
     def test_realiza_actividad_iniciada(self):
         # El usuario se autentica
-        username = 'usuario1'
-        password = 'usuario1'
+        username = 'usuario2'
+        password = 'usuario2'
         usuario = self.login(username, password)
         numero_sesionactividad_antes = SesionActividad.objects.count()
-        enlace = 'http://localhost:8000' + reverse('ejercicio_mock_2')
+        enlace = 'http://localhost:8000' + reverse('ejercicio_mock_1')
         actividad = Actividad.objects.get(enlace=enlace)
-        enlace = self.live_server_url + reverse('ejercicio_mock_2')
+        enlace = self.live_server_url + reverse('ejercicio_mock_1')
         # El usuario usa el enlace para acceder a la actividad
         self.selenium.get(enlace)
         # Se ejecuta el script de JavaScript asociado al inicio de la actividad
@@ -203,6 +204,7 @@ class SesionActividadTestCase(StaticLiveServerTestCase):
         # Se comprueba que se ha notificado al usuario que la actividad ha terminado correctamente
         alerta_exito = self.selenium.find_element_by_class_name('alert-success')
         self.assertEquals(alerta_exito.text, 'Se ha realizado correctamente la actividad')
+        self.assertTrue(actividad in usuario.actividades_realizadas.all())
         # El usuario se desloguea
         self.logout()
 
@@ -297,6 +299,7 @@ class SesionActividadTestCase(StaticLiveServerTestCase):
         # Se comprueba que se ha notificado al usuario que la actividad ha terminado correctamente
         alerta_exito = self.selenium.find_element_by_class_name('alert-success')
         self.assertEquals(alerta_exito.text, 'Se ha realizado correctamente la actividad')
+        self.assertTrue(actividad in usuario.actividades_realizadas.all())
         # El usuario vuelve a intentar finalizar la actividad
         boton_mock.click()
         # Se ejecuta el script de JavaScript asociado al inicio de la actividad
@@ -304,6 +307,7 @@ class SesionActividadTestCase(StaticLiveServerTestCase):
         # Se notifica al usuario que ha habido un error al intentar finalizar la actividad de nuevo
         alerta_error = self.selenium.find_element_by_class_name('alert-danger')
         self.assertEquals(alerta_error.text, 'Se ha producido un error en la conexión con el servidor')
+        self.assertTrue(actividad in usuario.actividades_realizadas.all())
         # El usuario se desloguea
         self.logout()
 

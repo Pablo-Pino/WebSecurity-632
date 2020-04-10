@@ -13,7 +13,8 @@ from prueba1.forms.oferta_forms import OfertaCreacionForm, OfertaEdicionForm, Of
 from prueba1.models.oferta_models import Oferta, Solicitud
 from prueba1.models.perfil_models import Usuario
 from prueba1.services.oferta_services import crea_oferta, edita_oferta, elimina_oferta, veta_oferta, \
-    levanta_veto_oferta, oferta_formulario, lista_ofertas, cierra_oferta, solicita_oferta, retira_solicitud_oferta
+    levanta_veto_oferta, oferta_formulario, lista_ofertas, cierra_oferta, solicita_oferta, retira_solicitud_oferta, \
+    lista_ofertas_propias
 
 
 class ListadoOfertaView(LoginRequiredMixin, View):
@@ -22,8 +23,6 @@ class ListadoOfertaView(LoginRequiredMixin, View):
 
     def get(self, request):
         context = {}
-        # Se obtienen todas las oferta
-        oferta = Oferta.objects.all()
         # Se consulta que usuario esta autenticado en este momento
         try:
             usuario = Usuario.objects.get(django_user_id = request.user.id)
@@ -53,6 +52,25 @@ class ListadoOfertaView(LoginRequiredMixin, View):
             'usuario': usuario,
             'ofertas_solicitables': ofertas_solicitables,
             'ofertas_retirables': ofertas_retirables,
+        })
+        return render(request, self.template_name, context)
+
+class ListadoOfertaPropiaView(LoginRequiredMixin, View):
+    # No se requieren permisos para visitar esta pagina
+    template_name = 'oferta/listado_ofertas.html'
+
+    def get(self, request):
+        context = {}
+        # Se consulta que usuario esta autenticado en este momento
+        try:
+            usuario = Usuario.objects.get(django_user_id = request.user.id)
+        except ObjectDoesNotExist:
+            usuario = None
+        ofertas = lista_ofertas_propias(request)
+        # Se añaden al contexto las oferta y el usuario y se muestra el listado
+        context.update({
+            'ofertas': ofertas,
+            'usuario': usuario,
         })
         return render(request, self.template_name, context)
 
@@ -254,6 +272,11 @@ class DetallesOfertaView(View):
         # listado de oferta
         except ObjectDoesNotExist as e:
             return oferta_no_hallada(request)
+        # En caso de que la oferta no pertenezca al usuario y esté en modo borrador, entonces se redirige al usuario al
+        # listado de ofertas, indicando que no puede acceder a los detalles de la oferta
+        if oferta.borrador and oferta.autor != usuario:
+            messages.error(request, 'No se tienen los permisos necesarios para acceder a la oferta')
+            return HttpResponseRedirect(reverse('oferta_listado'))
         # Se mira si la oferta ha sido solicitada
         es_solicitada = Solicitud.objects.filter(usuario=usuario, oferta=oferta).exists()
         retirable = False

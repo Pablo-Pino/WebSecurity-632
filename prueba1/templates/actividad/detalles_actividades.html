@@ -7,6 +7,17 @@
     <div>
 
         <h3>Identificador : {{ actividad.identificador }}</h3>
+
+        {% if actividad_realizada %}
+            <h4 id="h4_realizada" style="color:green;">REALIZADA</h4>
+        {% endif %}
+
+        {% if actividad.vetada %}
+            <h4 id="h4_vetada" style="color:red;">VETADA</h4>
+        {% endif %}
+
+
+
         <p>Titulo : {{ actividad.titulo }}</p>
         <p>Descripcion : {{ actividad.descripcion }}</p>
         <p>Fecha de creacion : {{ actividad.fecha_creacion }}</p> 
@@ -21,11 +32,23 @@
 
     {% if actividad.borrador and actividad.autor == usuario %}
         <td>
-            <button onclick="window.location.href = '/actividad/edicion/{{ actividad.id }}/'">Editar actividad</button>    
+            <button id="button_editar" onclick="window.location.href = '/actividad/edicion/{{ actividad.id }}/'">Editar actividad</button>
         </td>
         <td>
             <button id="button_eliminar" onclick="alerta_redireccion('Desea eliminar esta actividad ?', '/actividad/eliminacion/{{ actividad.id }}/')">Eliminar actividad</button>    
         </td>
+    {% endif %}
+
+    {% if not actividad.borrador and usuario.es_admin %}
+        {% if actividad.vetada %}
+            <td>
+                <button id="button_levantar_veto" onclick="alerta_redireccion('Desea levantar el veto sobre esta actividad ?', '/actividad/levantamiento_veto/{{ actividad.id }}/')">Levantar el veto sobre la actividad</button>
+            </td>
+        {% else %}
+            <td>
+                <button id="button_vetar" onclick="window.location.href = '/actividad/veto/{{ actividad.id }}/'">Vetar actividad</button>
+            </td>
+        {% endif %}
     {% endif %}
 
 {% endblock %}

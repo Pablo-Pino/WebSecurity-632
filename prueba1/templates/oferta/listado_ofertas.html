@@ -14,7 +14,13 @@
                 <th>Autor</th>
             </tr>
             {% for oferta in ofertas %}
-                <tr>
+                {% if oferta.cerrada or oferta.vetada %}
+                    <tr style='background-color:rgba(255, 0, 0, 0.4)'>
+                {% elif oferta in ofertas_solicitables %}
+                    <tr style='background-color:rgba(0, 255, 0, 0.4)'>
+                {% else %}
+                    <tr>
+                {% endif %}
                     <td>{{ oferta.titulo }}</td>
                     <td>{{ oferta.descripcion }}</td>
                     <td>{{ oferta.fecha_creacion | date:"SHORT_DATE_FORMAT" }}</td>
