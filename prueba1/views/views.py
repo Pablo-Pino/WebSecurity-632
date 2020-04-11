@@ -18,7 +18,10 @@ class HomeView(View):
         context = {}
         user = request.user
         if user:
-            context.update({'user': user})
+            context.update({
+                'user': user,
+                'home': True,
+            })
         return render(request, self.template_name, context)
 
 class EjercicioMock1View(View):

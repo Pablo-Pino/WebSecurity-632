@@ -32,6 +32,7 @@ class ListadoActividadesView(LoginRequiredMixin, View):
             'actividades': listado_actividades(request),
             'usuario': usuario,
             'actividades_realizadas': usuario.actividades_realizadas.all(),
+            'titulo_pagina': 'Listado de actividades',
         })
         return render(request, self.template_name, context)
 
@@ -49,7 +50,8 @@ class ListadoActividadesPropiasView(LoginRequiredMixin, View):
         # Se añaden al contexto las actividades y el usuario y se muestra el listado
         context.update({
             'actividades': listado_actividades_propias(request),
-            'usuario': usuario
+            'usuario': usuario,
+            'titulo_pagina': 'Mis actividades',
         })
         return render(request, self.template_name, context)
 

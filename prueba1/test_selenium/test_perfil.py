@@ -6,13 +6,15 @@ from django.db.models import Q
 from django.core.exceptions import ObjectDoesNotExist
 from selenium.webdriver import FirefoxProfile
 
-from selenium.webdriver.chrome.webdriver import WebDriver
+from selenium.webdriver.firefox.webdriver import WebDriver
 from selenium import webdriver
 from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.common.keys import Keys
 
 from prueba1.models.perfil_models import Usuario, Anexo
 from prueba1.models.actividad_models import Actividad
+
+from prueba1.test_selenium.test_actividad import ActividadTestCase
 
 import datetime
 
@@ -54,13 +56,13 @@ class PerfilTestCase(StaticLiveServerTestCase):
 
     # Un usuario accede a los detalles de su perfil
     def test_detalles_mi_perfil(self):
+        print('propio')
         # El usuario se loguea
         username = 'usuario1'
         password = 'usuario1'
         usuario = self.login(username, password)
         # Se obtienen las variables necesarias para el test
         anexos_esperados = list(Anexo.objects.filter(usuario = usuario).order_by('id'))
-        print(anexos_esperados)
         # Se accede a los detallles de mi perfil
         self.selenium.get('%s%s' % (self.live_server_url, '/perfil/detalles/'))
         # Se comprueba el titulo de la página
@@ -76,6 +78,43 @@ class PerfilTestCase(StaticLiveServerTestCase):
         # Se comprueba que aparecen los anexos
         anexos_recibidos = self.selenium.find_elements_by_xpath('//fieldset[@id="id_fieldset_anexos"]/child::ul/child::li')
         self.evaluar_anexos(anexos_recibidos, anexos_esperados)
+        # Se comprueba el listado de actividades resueltas
+        fieldset_actividades = self.selenium.find_element_by_id('id_fieldset_actividades')
+        actividades_esperadas = Actividad.objects.filter(usuario=usuario)
+        ActividadTestCase.evaluar_columnas_listado_actividades(self, fieldset_actividades, actividades_esperadas, usuario, False)
+        # Se cierra sesion
+        self.logout()
+
+    # Un usuario accede a los detalles del perfil de otro usuario
+    def test_detalles_perfil_ajeno(self):
+        print('ajeno')
+        # El usuario se loguea
+        username = 'usuario1'
+        password = 'usuario1'
+        usuario = self.login(username, password)
+        # Se obtienen las variables necesarias para el test
+        anexos_esperados = list(Anexo.objects.filter(usuario=usuario).order_by('id'))
+        # Se accede a los detalles del perfil de otro usuario
+        usuario_perfil = Usuario.objects.exclude(django_user__id=usuario.id).first()
+        self.selenium.get('%s%s' % (self.live_server_url, '/perfil/detalles/{}/'.format(usuario_perfil.id)))
+        # Se comprueba el titulo de la página
+        h1_text = self.selenium.find_element_by_tag_name('h1').text
+        self.assertEqual(h1_text, 'Perfil de {}'.format(username))
+        # Se comprueba que aparecen el resto de campos salvo los anexos
+        textos = [element.text for element in self.selenium.find_elements_by_xpath('//div[@id="id_body_detalles_perfil"]/child::p')]
+        self.assertEqual(textos[0], 'Nombre : {}'.format(usuario.django_user.first_name))
+        self.assertEqual(textos[1], 'Apellidos : {}'.format(usuario.django_user.last_name))
+        self.assertEqual(textos[2], 'Email : {}'.format(usuario.django_user.email))
+        self.assertEqual(textos[3], 'Telefono : {}'.format(usuario.telefono))
+        self.assertEqual(textos[4], 'Empresa/equipo : {}'.format(usuario.empresa_u_equipo))
+        # Se comprueba que aparecen los anexos
+        anexos_recibidos = self.selenium.find_elements_by_xpath(
+            '//fieldset[@id="id_fieldset_anexos"]/child::ul/child::li')
+        self.evaluar_anexos(anexos_recibidos, anexos_esperados)
+        # Se comprueba el listado de actividades resueltas
+        fieldset_actividades = self.selenium.find_element_by_id('id_fieldset_actividades')
+        actividades_esperadas = Actividad.objects.filter(usuario=usuario)
+        ActividadTestCase.evaluar_columnas_listado_actividades(self, fieldset_actividades, actividades_esperadas, usuario, False)
         # Se cierra sesion
         self.logout()
 
@@ -104,12 +143,13 @@ class PerfilTestCase(StaticLiveServerTestCase):
         self.assertEqual(boton_creacion.get_attribute('onclick'), 'window.location.href = \'/anexo/creacion_edicion/\'')
         self.assertEqual(boton_creacion.text, 'Crear nuevo anexo')
 
-
+    '''
 
     # TEST EDICION PERFIL
 
     # Un usuario edita su perfil
     def test_editar_mi_perfil(self):
+        print('Edito')
         # El usuario se loguea
         username = 'usuario1'
         password = 'usuario1'
@@ -432,3 +472,4 @@ class PerfilTestCase(StaticLiveServerTestCase):
         # El usuario se desloguea
         self.logout()
 
+    '''

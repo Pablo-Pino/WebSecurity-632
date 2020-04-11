@@ -44,4 +44,6 @@ class Solicitud(models.Model):
         for actividad in actividades_requeridas:
             if not actividad in actividades_realizadas:
                 raise ValidationError("El usuario debe haber resuelto todas las actividades para poder solicitar la oferta")
+        if self.usuario == self.oferta.autor:
+            raise ValidationError("El autor de la oferta no puede ser un solicitante de la misma")
 

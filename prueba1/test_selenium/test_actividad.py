@@ -51,7 +51,7 @@ class ActividadTestCase(StaticLiveServerTestCase):
         self.selenium.get('%s%s' % (self.live_server_url, '/logout'))
 
 
-
+    '''
     # TESTS DE LISTADO
 
     # Un usuario que no es administrador accede al listado de actividades
@@ -66,7 +66,7 @@ class ActividadTestCase(StaticLiveServerTestCase):
         actividades_mostradas = self.selenium.find_elements_by_tag_name('tr')
         self.assertEqual(len(actividades_esperadas), len(actividades_mostradas) - 1)
         # Se comprueba que el contenido de la tabla es correcto
-        self.evaluar_columnas_listado_actividades(actividades_esperadas, usuario, False)
+        self.evaluar_columnas_listado_actividades(self.selenium, actividades_esperadas, usuario, True)
         # Se cierra sesion
         self.logout()
 
@@ -82,11 +82,9 @@ class ActividadTestCase(StaticLiveServerTestCase):
         actividades_mostradas = self.selenium.find_elements_by_tag_name('tr')
         self.assertEqual(len(actividades_esperadas), len(actividades_mostradas) - 1)
         # Se comprueba que el contenido de la tabla es correcto
-        self.evaluar_columnas_listado_actividades(actividades_esperadas, usuario, False)
+        self.evaluar_columnas_listado_actividades(self.selenium, actividades_esperadas, usuario, True)
         # Se cierra sesion
         self.logout()
-
-
 
     # Un usuario accede al listado de sus propias actividades
     def test_listado_actividades_propias(self):
@@ -99,42 +97,42 @@ class ActividadTestCase(StaticLiveServerTestCase):
         actividades_mostradas = self.selenium.find_elements_by_tag_name('tr')
         self.assertEqual(len(actividades_esperadas), len(actividades_mostradas) - 1)
         # Se comprueba que el contenido de la tabla es correcto
-        self.evaluar_columnas_listado_actividades(actividades_esperadas, usuario, True)
+        self.evaluar_columnas_listado_actividades(self.selenium, actividades_esperadas, usuario, False)
         # Se cierra sesion
         self.logout()
-
-
-    def evaluar_columnas_listado_actividades(self, actividades_esperadas, usuario, listado_propio):
+    '''
+    def evaluar_columnas_listado_actividades(self, element, actividades_esperadas, usuario, resalta_resueltas):
+        print('actividad')
         i = 2
         # Por cada una de las actividades que debe aparecer
         for actividad in actividades_esperadas:
-            fila = self.selenium.find_element_by_xpath('//tr[{}]'.format(i))
+            fila = element.find_element_by_xpath('//tr[{}]'.format(i))
             # Si la actividad está vetada, debe aparecer con unn background rojizo
             if actividad.vetada:
                 self.assertEqual(fila.value_of_css_property('background-color'), 'rgba(255, 0, 0, 0.4)')
             # Si la actividad está resuelta y no vetada, entonces el background es verdoso
             # Esto solo se aplica cuando no se estan listando las propias ofertas
-            elif actividad in usuario.actividades_realizadas.all() and not listado_propio:
+            elif actividad in usuario.actividades_realizadas.all() and resalta_resueltas:
                 self.assertEqual(fila.value_of_css_property('background-color'), 'rgba(0, 255, 0, 0.4)')
             # Se comprueba el título
-            titulo = self.selenium.find_element_by_xpath('//tbody/child::tr[{}]/child::td[1]'.format(i)).text
+            titulo = element.find_element_by_xpath('//tbody/child::tr[{}]/child::td[1]'.format(i)).text
             self.assertEqual(titulo, actividad.titulo)
             # Se comprueba las descripción
-            descripcion = self.selenium.find_element_by_xpath('//tbody/child::tr[{}]/child::td[2]'.format(i)).text
+            descripcion = element.find_element_by_xpath('//tbody/child::tr[{}]/child::td[2]'.format(i)).text
             self.assertEqual(descripcion, actividad.descripcion)
             # Se comprueba la fecha de creación
-            fecha_creacion = self.selenium.find_element_by_xpath('//tbody/child::tr[{}]/child::td[3]'.format(i)).text
+            fecha_creacion = element.find_element_by_xpath('//tbody/child::tr[{}]/child::td[3]'.format(i)).text
             self.assertEqual(fecha_creacion, actividad.fecha_creacion.strftime('%d/%m/%Y'))
             # Se comprueba el autor
-            autor = self.selenium.find_element_by_xpath('//tbody/child::tr[{}]/child::td[4]'.format(i)).text
+            autor = element.find_element_by_xpath('//tbody/child::tr[{}]/child::td[4]'.format(i)).text
             self.assertEqual(autor, '{} {}'.format(actividad.autor.django_user.first_name, actividad.autor.django_user.last_name))
             # Se comprueba que está el botón de detalles
-            boton_detalles = self.selenium.find_element_by_xpath('//tbody/child::tr[{}]/child::td[5]/child::button'.format(i))
+            boton_detalles = element.find_element_by_xpath('//tbody/child::tr[{}]/child::td[5]/child::button'.format(i))
             self.assertEqual(boton_detalles.get_attribute('onclick'), 'window.location.href = \'/actividad/detalles/{}/\''.format(actividad.id))
             j = 6
             # Se comprueba que esté el botón de editar si procede
             try:
-                boton_editar = self.selenium.find_element_by_xpath('//tbody/child::tr[{}]/child::td[{}]/child::button'.format(i, j))
+                boton_editar = element.find_element_by_xpath('//tbody/child::tr[{}]/child::td[{}]/child::button'.format(i, j))
                 if usuario == actividad.autor and actividad.borrador:
                     self.assertEqual(boton_editar.get_attribute('onclick'), 'window.location.href = \'/actividad/edicion/{}/\''.format(actividad.id))
                     boton_editar = True
@@ -147,7 +145,7 @@ class ActividadTestCase(StaticLiveServerTestCase):
             self.assertEqual(usuario == actividad.autor and actividad.borrador, boton_editar)
             # Se comprueba que está el botón de eliminar si procede
             try:
-                boton_eliminar = self.selenium.find_element_by_xpath('//tbody/child::tr[{}]/child::td[{}]/child::button'.format(i, j))
+                boton_eliminar = element.find_element_by_xpath('//tbody/child::tr[{}]/child::td[{}]/child::button'.format(i, j))
                 if usuario == actividad.autor and actividad.borrador:
                     self.assertEqual(boton_eliminar.get_attribute('onclick'), 'alerta_redireccion(\'Desea eliminar esta actividad ?\', \'/actividad/eliminacion/{}/\')'.format(actividad.id))
                     boton_eliminar = True
@@ -160,7 +158,7 @@ class ActividadTestCase(StaticLiveServerTestCase):
             self.assertEqual(usuario == actividad.autor and actividad.borrador, boton_eliminar)
             # Se comprueba que está el botón de vetar si procede
             try:
-                boton_veto = self.selenium.find_element_by_xpath('//tbody/child::tr[{}]/child::td[{}]/child::button'.format(i, j))
+                boton_veto = element.find_element_by_xpath('//tbody/child::tr[{}]/child::td[{}]/child::button'.format(i, j))
                 if usuario.es_admin and not actividad.borrador and not actividad.vetada:
                     self.assertEqual(boton_veto.get_attribute('onclick'), 'window.location.href = \'/actividad/veto/{}/\''.format(actividad.id))
                     boton_veto = True
@@ -173,7 +171,7 @@ class ActividadTestCase(StaticLiveServerTestCase):
             self.assertEqual(usuario.es_admin and not actividad.borrador and not actividad.vetada, boton_veto)
             # Se comprueba que está el botón de levantar veto si procede
             try:
-                boton_levanta_veto = self.selenium.find_element_by_xpath('//tbody/child::tr[{}]/child::td[{}]/child::button'.format(i, j))
+                boton_levanta_veto = element.find_element_by_xpath('//tbody/child::tr[{}]/child::td[{}]/child::button'.format(i, j))
                 if usuario.es_admin and not actividad.borrador and actividad.vetada:
                     self.assertEqual(boton_levanta_veto.get_attribute('id'), 'button_levantar_veto_{}'.format(actividad.id))
                     boton_levanta_veto = True
@@ -187,7 +185,7 @@ class ActividadTestCase(StaticLiveServerTestCase):
             i = i + 1
 
 
-
+    '''
     # TEST DE DETALLES
 
     # Para comprobar los botones de vetar y levantar el veto, además del motivo de veto y el enlace a la actividad
@@ -1039,5 +1037,5 @@ class ActividadTestCase(StaticLiveServerTestCase):
         # El usuario se desloguea
         self.logout()
 
-
+    '''
 

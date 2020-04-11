@@ -246,7 +246,7 @@ list_actividades = [actividad_7, actividad_1, actividad_2, actividad_4, activida
 usuario_1.actividades_realizadas.set(list_actividades)
 usuario_1.save()
 
-list_actividades = [actividad_8, actividad_2, actividad_5]
+list_actividades = [actividad_7, actividad_2, actividad_5, actividad_4, actividad_9]
 usuario_2.actividades_realizadas.set(list_actividades)
 usuario_2.save()
 
@@ -435,18 +435,18 @@ for oferta in ofertas:
 # SOLICITUDES
 
 solicitud_1 = Solicitud(
-    usuario=usuario_1,
+    usuario=usuario_2,
     oferta=oferta_2
 )
 
 solicitud_2 = Solicitud(
-    usuario=usuario_2,
+    usuario=usuario_1,
     oferta=oferta_6
 )
 
 solicitud_3 = Solicitud(
     usuario=usuario_1,
-    oferta=oferta_7
+    oferta=oferta_3
 )
 
 solicitud_4 = Solicitud(

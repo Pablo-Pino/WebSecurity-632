@@ -52,7 +52,7 @@ class OfertaTestCase(StaticLiveServerTestCase):
         self.selenium.get('%s%s' % (self.live_server_url, '/logout'))
 
 
-    
+    '''
     # TESTS DE LISTADO
     
     # Un usuario que no es administrador accede al listado de ofertas
@@ -102,6 +102,25 @@ class OfertaTestCase(StaticLiveServerTestCase):
          self.evaluar_columnas_listado_oferta(ofertas_esperadas, usuario, True)
          # Se cierra sesion
          self.logout()
+    '''
+
+    # Un usuario que accede al listado de ofertas que ha solicitado
+    def test_listado_solicitudes_propias(self):
+        # Se accede al listado de oferta como el usuario1
+        self.login('usuario1', 'usuario1')
+        # Se accede al listado de ofertas solicitadas propias
+        self.selenium.get('%s%s' % (self.live_server_url, '/oferta/listado_solicitud_propio'))
+        # Se comprueba que aparecen las ofertas correctas
+        usuario = Usuario.objects.get(django_user__username='usuario1')
+        ofertas_esperadas = []
+        for solicitud in list(Solicitud.objects.filter(usuario=usuario).order_by('id')):
+            ofertas_esperadas.append(solicitud.oferta)
+        ofertas_mostradas = self.selenium.find_elements_by_tag_name('tr')
+        self.assertEqual(len(ofertas_esperadas), len(ofertas_mostradas) - 1)
+        # Se comprueba que el contenido de la tabla es correcto
+        self.evaluar_columnas_listado_oferta(ofertas_esperadas, usuario, True)
+        # Se cierra sesion
+        self.logout()
 
     def evaluar_columnas_listado_oferta(self, oferta_esperadas, usuario, listado_propio):
         i = 2
@@ -253,7 +272,7 @@ class OfertaTestCase(StaticLiveServerTestCase):
             i = i + 1
 
 
-
+    '''
     # TEST DE DETALLES
 
     # Un usuario accede a los detalles de una oferta no baneada y no es administrador
@@ -326,8 +345,6 @@ class OfertaTestCase(StaticLiveServerTestCase):
         # El usuario se desloguea
         self.logout()
 
-    '''
-
     # Un usuario accede a los detalles de una oferta ajena en modo borrador
     def test_detalles_oferta_ajena_borrador(self):
         # El usuario se loguea y se inicializan las variables más relevantes
@@ -342,8 +359,6 @@ class OfertaTestCase(StaticLiveServerTestCase):
         self.assertEqual(message_success.text, 'No se tienen los permisos necesarios para acceder a la oferta')
         # El usuario se desloguea
         self.logout()
-
-    '''
     
     # Un usuario accede a los detalles de una oferta ajena en modo no borrador
     def test_detalles_oferta_ajena_no_borrador(self):
@@ -427,7 +442,7 @@ class OfertaTestCase(StaticLiveServerTestCase):
         self.assertEqual(texts[2], 'Fecha de creacion : {}'.format(oferta_fecha_creacion))
         self.assertEqual(texts[3], 'Autor : {} {}'.format(oferta.autor.django_user.first_name, oferta.autor.django_user.last_name))
         # Comprueba el fieldset de actividades
-        fieldset_actividades = self.selenium.find_element_by_tag_name('fieldset')
+        fieldset_actividades = self.selenium.find_element_by_id('fieldset_actividades')
         # Comprueba el legend del fieldset
         legend_actividades = fieldset_actividades.find_element_by_tag_name('legend')
         self.assertEqual(legend_actividades.text, 'Actividades')
@@ -449,6 +464,42 @@ class OfertaTestCase(StaticLiveServerTestCase):
             enlace = p_enlace.find_element_by_tag_name('a')
             self.assertEqual(enlace.get_attribute('href'), '{}/actividad/detalles/{}/'.format(self.live_server_url, actividad.id))
             self.assertEqual(enlace.text, 'Detalles de la actividad')
+        # Si el usuario es el autor de la oferta, debe apareecer otro fieldset con los solicitantes
+        # Busca el fieldset
+        try:
+            fieldset_solicitantes = self.selenium.find_element_by_id('fieldset_solicitantes')
+        except NoSuchElementException as e:
+            fieldset_solicitantes = None
+        if usuario == oferta.autor and not oferta.borrador:
+            self.assertIsNotNone(fieldset_solicitantes)
+            # Comprueba el legend del fieldset
+            legend_solicitantes = fieldset_solicitantes.find_element_by_tag_name('legend')
+            self.assertEqual(legend_solicitantes.text, 'Solicitantes')
+            # Comprueba los fieldsets contenidos dentro del fieldset
+            list_solicitantes_fieldsets = fieldset_solicitantes.find_elements_by_tag_name('fieldset')
+            numero_solicitantes = len(list(Solicitud.objects.filter(oferta=oferta)))
+            self.assertEqual(len(list_solicitantes_fieldsets), numero_solicitantes)
+            # En cada fieldset
+            for fieldset in list_solicitantes_fieldsets:
+                ps_fieldset = fieldset.find_elements_by_tag_name('p')
+                # Se obtiene el nombre y apellidos del usuario
+                p_nombre_apellidos = ps_fieldset[0]
+                # Se obtiene el email del usuario
+                p_email = ps_fieldset[1]
+                # Se obtiene el enlace al perfil del usuario
+                p_enlace = ps_fieldset[2]
+                enlace = p_enlace.find_element_by_tag_name('a')
+                # Se obtiene el usuario a través del email, que actúa como clave única
+                solicitante = Usuario.objects.get(django_user__email=p_email.text)
+                # Se comprueba el nombre y apellidos
+                self.assertEqual(p_nombre_apellidos.text, '{} {}'.format(solicitante.django_user.first_name,
+                    solicitante.django_user.last_name))
+                # Se comprueba el enlace
+                self.assertEqual(enlace.get_attribute('href'),
+                    '{}/perfil/detalles/{}/'.format(self.live_server_url, solicitante.id))
+                self.assertEqual(enlace.text, 'Perfil del solicitante')
+        else:
+            self.assertIsNone(fieldset_solicitantes)
         # Mira si hay un boton de editar
         existe_boton_editar = True
         try:
@@ -493,7 +544,7 @@ class OfertaTestCase(StaticLiveServerTestCase):
             existe_boton_retirar_solicitud = False
         # Si el usuario es el autor de la oferta, entonces debe poder editarla o eliminarla si la oferta está en
         # modo borrador
-        if oferta.borrador and not oferta.vetada and not oferta.cerrada and oferta.autor == usuario:
+        if oferta.autor == usuario and oferta.borrador and not oferta.vetada and not oferta.cerrada:
             self.assertTrue(existe_boton_editar)
             self.assertTrue(existe_boton_eliminar)
         # En cualquier otro caso, comprueba que no aparecen los botones
@@ -502,7 +553,7 @@ class OfertaTestCase(StaticLiveServerTestCase):
             self.assertFalse(existe_boton_editar)
         # Si el usuario es el autor de la oferta, entonces debe poder cerrarla si la oferta no está en
         # modo borrador y no está ni vetada, ni cerrada
-        if not oferta.borrador and not oferta.vetada and not oferta.cerrada and oferta.autor == usuario:
+        if oferta.autor == usuario and not oferta.borrador and not oferta.vetada and not oferta.cerrada:
             self.assertTrue(existe_boton_cerrar)
         # En cualquier otro caso, comprueba que no aparecen los botones
         else:
@@ -1624,7 +1675,7 @@ class OfertaTestCase(StaticLiveServerTestCase):
 
     def test_solicita_oferta(self):
         # El usuario se loguea y se obtienen las variables que se van a usar en el test
-        usuario = self.login('usuario1', 'usuario1')
+        usuario = self.login('usuario2', 'usuario2')
         # Se busca una oferta que se pueda solicitar
         ofertas_solicitadas = []
         for solicitud in list(Solicitud.objects.filter(usuario=usuario).only('oferta')):
@@ -1674,7 +1725,7 @@ class OfertaTestCase(StaticLiveServerTestCase):
 
     def test_solicita_oferta_sin_requisitos(self):
         # El usuario se loguea y se obtienen las variables que se van a usar en el test
-        usuario = self.login('usuario2', 'usuario2')
+        usuario = self.login('usuario3', 'usuario3')
         # Se busca una oferta que se pueda solicitar
         ofertas_solicitadas = []
         for solicitud in list(Solicitud.objects.filter(usuario=usuario).only('oferta')):
@@ -1746,16 +1797,21 @@ class OfertaTestCase(StaticLiveServerTestCase):
                     break
         # Se acccede a la url de solicitud de ofertas
         self.selenium.get('%s%s' % (self.live_server_url, '/oferta/solicitud/{}'.format(oferta.id)))
-        # Se comprueba que se está en la página de detalles de la oferta
+        # Se comprueba que se está en la página de listado de las ofertas
         # Pero antes se tiene que esperar a que redirija a la página
         wait_driver = WebDriverWait(self.selenium, 3)
+        print(oferta.id)
         wait_driver.until(
-            lambda driv: driv.current_url == '{}/oferta/detalles/{}/'.format(self.live_server_url, oferta.id))
-        self.assertEqual('{}/oferta/detalles/{}/'.format(self.live_server_url, oferta.id),
-                         self.selenium.current_url)
+            lambda driv: driv.current_url == '{}/oferta/listado/'.format(self.live_server_url, oferta.id))
+        self.assertEqual('{}/oferta/listado/'.format(self.live_server_url), self.selenium.current_url)
         # Se busca el mensaje de éxito y se comprueba que es correcto
-        message_success = self.selenium.find_element_by_class_name('alert-danger')
-        self.assertEqual(message_success.text, 'No se puede solicitar una oferta que está en modo borrador')
+        messages_error = self.selenium.find_elements_by_class_name('alert-danger')
+        mensaje_error_correcto = False
+        for mensaje_error in messages_error:
+            if mensaje_error.text == 'No se puede solicitar una oferta que está en modo borrador':
+                mensaje_error_correcto = True
+                break
+        self.assertTrue(mensaje_error_correcto)
         # Se comprueba que se ha solicitado la oferta
         try:
             solicitud = Solicitud.objects.get(usuario=usuario, oferta=oferta)
@@ -1858,7 +1914,56 @@ class OfertaTestCase(StaticLiveServerTestCase):
         self.assertIsNone(solicitud)
         # El usuario se desloguea
         self.logout()
-      
+
+    # Un usuario trata de solicitar una oferta de su autoría
+    def test_solicita_oferta_propia(self):
+        # El usuario se loguea y se obtienen las variables que se van a usar en el test
+        usuario = self.login('usuario1', 'usuario1')
+        # Se busca una oferta que se pueda solicitar. En este caso se añade la condición de que el usuario debe ser el
+        # autor de la oferta
+        ofertas_solicitadas = []
+        for solicitud in list(Solicitud.objects.filter(usuario=usuario).only('oferta')):
+            ofertas_solicitadas.append(solicitud.oferta)
+        ofertas_posibles = []
+        for oferta_for in list(Oferta.objects.filter(borrador=False, vetada=False, cerrada=False, autor=usuario)):
+            ofertas_posibles.append(oferta_for)
+        actividades_realizadas = Usuario.objects.get(pk=usuario.id).actividades_realizadas.all()
+        # Se comprueba que no se ha solicitado antes la oferta y que se han realizado las actividades necesarias
+        oferta = None
+        for oferta_posible in ofertas_posibles:
+            puede_solicitar = True
+            # Si no se ha solicitado al oferta antes
+            if not oferta_posible in ofertas_solicitadas:
+                # Comprueba que se han realizado las tareas anteriores
+                actividades_requisitos = oferta_posible.actividades.all()
+                for actividad_requisito in actividades_requisitos:
+                    if not actividad_requisito in actividades_realizadas:
+                        puede_solicitar = False
+                        break
+                if puede_solicitar:
+                    oferta = oferta_posible
+                    break
+        # Debido a que no aparece el botón para solicitar, se introduce la url directamente
+        self.selenium.get('%s%s' % (self.live_server_url, '/oferta/solicitud/{}/'.format(oferta.id)))
+        # Se comprueba que se está en la página de detalles de la oferta
+        # Pero antes se tiene que esperar a que redirija a la página
+        wait_driver = WebDriverWait(self.selenium, 3)
+        wait_driver.until(
+            lambda driv: driv.current_url == '{}/oferta/detalles/{}/'.format(self.live_server_url, oferta.id))
+        self.assertEqual('{}/oferta/detalles/{}/'.format(self.live_server_url, oferta.id),
+                         self.selenium.current_url)
+        # Se busca el mensaje de error y se comprueba que es correcto
+        message_error = self.selenium.find_element_by_class_name('alert-danger')
+        self.assertEqual(message_error.text, 'No se puede solicitar una oferta de la que se es autor')
+        # Se comprueba que no se ha solicitado la oferta
+        try:
+            solicitud = Solicitud.objects.get(usuario=usuario, oferta=oferta)
+        except ObjectDoesNotExist as e:
+            solicitud = None
+        self.assertIsNone(solicitud)
+        # El usuario se desloguea
+        self.logout()
+
     def test_solicita_oferta_sin_autenticar(self):
         # Se busca una oferta que se pueda solicitar
         ofertas_posibles = []
@@ -1892,7 +1997,7 @@ class OfertaTestCase(StaticLiveServerTestCase):
 
     def test_retira_solicitud(self):
         # El usuario se loguea y se obtienen las variables que se van a usar en el test
-        usuario = self.login('usuario1', 'usuario1')
+        usuario = self.login('usuario2', 'usuario2')
         # Se busca una oferta que se pueda retirar
         oferta = Solicitud.objects.filter(oferta__vetada=False, oferta__borrador=False, oferta__cerrada=False).first().oferta
         # Se acccede a la url de listado de ofertas
@@ -1953,7 +2058,7 @@ class OfertaTestCase(StaticLiveServerTestCase):
 
     def test_retira_solicitud_oferta_vetada(self):
         # El usuario se loguea y se obtienen las variables que se van a usar en el test
-        usuario = self.login('usuario2', 'usuario2')
+        usuario = self.login('usuario1', 'usuario1')
         # Se busca una oferta que se pueda retirar
         oferta = Solicitud.objects.filter(oferta__vetada=True, oferta__borrador=False, oferta__cerrada=False).first().oferta
         # Se acccede a la url de listado de ofertas
@@ -2029,8 +2134,8 @@ class OfertaTestCase(StaticLiveServerTestCase):
         self.assertEqual(message_success.text, 'No se ha encontrado la oferta')
         # El usuario se desloguea
         self.logout()
-        
 
+    '''
 
     # METODOS AUXILIARES
 

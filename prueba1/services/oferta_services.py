@@ -122,6 +122,16 @@ def levanta_veto_oferta(request, oferta):
     oferta.save(update_fields = ['motivo_veto', 'vetada'])
 
 @transaction.atomic
+def lista_solicitudes_propias(request):
+    if not request.user.is_authenticated:
+        raise Exception('Se debe estar autenticado para listar las ofertas solicitadas')
+    usuario = Usuario.objects.get(django_user__id=request.user.id)
+    ofertas = []
+    for solicitud in list(Solicitud.objects.filter(usuario=usuario).order_by('id')):
+        ofertas.append(solicitud.oferta)
+    return ofertas
+
+@transaction.atomic
 def solicita_oferta(request, oferta):
     usuario = Usuario.objects.get(django_user_id=request.user.id)
     solicitud = Solicitud(

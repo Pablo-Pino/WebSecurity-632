@@ -77,7 +77,7 @@ class OfertaTestCase(TestCase):
         # El usuario se desloguea
         self.logout()
 
-    # Un usuario accede al listado de ofertas correctamente
+    # Un usuario accede al listado de ofertas propias correctamente
     def test_lista_ofertas_propias(self):
         # Se inicializan variables y el usuario se loguea
         username = 'usuario1'
@@ -91,6 +91,29 @@ class OfertaTestCase(TestCase):
         # Se obtienen los resultados
         usuario_recibido = response.context['usuario']
         ofertas_recibidas = list(response.context['ofertas'].order_by('id'))
+        # Se comprueba que los resultados son correctos
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(ofertas_esperadas, ofertas_recibidas)
+        self.assertEqual(usuario_esperado, usuario_recibido)
+        # El usuario se desloguea
+        self.logout()
+
+    # Un usuario accede al listado de ofertas que ha solicitado
+    def test_lista_solicitudes_propias(self):
+        # Se inicializan variables y el usuario se loguea
+        username = 'usuario1'
+        password = 'usuario1'
+        usuario = self.login(username, password)
+        # Se crean variables con los datos correctos
+        usuario_esperado = Usuario.objects.get(django_user__username=username)
+        ofertas_esperadas = []
+        for solicitud in list(Solicitud.objects.filter(usuario=usuario).order_by('id')):
+            ofertas_esperadas.append(solicitud.oferta)
+        # Se simula una petición al listado de la oferta
+        response = self.client.get('/oferta/listado_solicitud_propio/')
+        # Se obtienen los resultados
+        usuario_recibido = response.context['usuario']
+        ofertas_recibidas = response.context['ofertas']
         # Se comprueba que los resultados son correctos
         self.assertEqual(response.status_code, 200)
         self.assertEqual(ofertas_esperadas, ofertas_recibidas)
@@ -1102,8 +1125,8 @@ class OfertaTestCase(TestCase):
     # Un usuario solicita una oferta
     def test_solicita_oferta(self):
         # Se inicializan variables y se loguea el usuario
-        username = 'usuario1'
-        password = 'usuario1'
+        username = 'usuario2'
+        password = 'usuario2'
         usuario = self.login(username, password)
         numero_solicitudes_antes = Solicitud.objects.all().count()
         # Se busca una oferta para solicitarla
@@ -1358,6 +1381,60 @@ class OfertaTestCase(TestCase):
         # El usuario se desloguea
         self.logout()
 
+    # Un usuario solicita una oferta con su autoría
+    def test_solicita_oferta_propia(self):
+        # Se inicializan variables y se loguea el usuario
+        username = 'usuario1'
+        password = 'usuario1'
+        usuario = self.login(username, password)
+        numero_solicitudes_antes = Solicitud.objects.all().count()
+        # Se busca una oferta para solicitarla
+        # Se buscan las ofertas que ya han sido solicitadas para descartarlas
+        ofertas_solicitadas = []
+        for solicitud in list(Solicitud.objects.filter(usuario=usuario).only('oferta')):
+            ofertas_solicitadas.append(solicitud.oferta)
+        # Se agrupan aquellas ofertas que, en principio podrían ser solicitadas ppor cualquier usuario, siempre que
+        # cumpla los requisitos. En este caso además, se busca que la oferta sea de la autoría del usuario
+        ofertas_posibles = []
+        for oferta_for in list(Oferta.objects.filter(borrador=False, vetada=False, cerrada=False, autor=usuario)):
+            ofertas_posibles.append(oferta_for)
+        # Se agrupan las actividades realizadas por el usuario, para luego comprobar que se cumplen los requisitos
+        actividades_realizadas = Usuario.objects.get(pk=usuario.id).actividades_realizadas.all()
+        # Se comprueba que no se ha solicitado antes la oferta y que se han realizado las actividades necesarias
+        oferta = None
+        # Se evalua cada oferta marcada como posible para evaluar si se cumplen sus requisitos
+        for oferta_posible in ofertas_posibles:
+            # Se asume que la actividad se puede solicitar
+            puede_solicitar = True
+            # Si no se ha solicitado la oferta antes
+            if not oferta_posible in ofertas_solicitadas:
+                # Comprueba que se han realizado las tareas marcadas como requisitos
+                actividades_requisitos = oferta_posible.actividades.all()
+                for actividad_requisito in actividades_requisitos:
+                    # En el momento en que no se tiene uno de los requisitos, la oferta no se puede solicitar
+                    if not actividad_requisito in actividades_realizadas:
+                        puede_solicitar = False
+                        break
+                # Si la oferta cumple todos los requisitos, se selecciona como oferta a seleccionar
+                if puede_solicitar:
+                    oferta = oferta_posible
+                    break
+        # Se realiza la petición para solicitar la oferta
+        response = self.client.get('/oferta/solicitud/{}/'.format(oferta.id))
+        # Se comparan los datos. Se comprueba que la oferta no ha sido solicitada, puesto a que no se puede solicitar
+        # una oferta de propia autoría
+        numero_solicitudes_despues = Solicitud.objects.all().count()
+        self.assertEqual(response.status_code, 302)
+        self.assertRedirects(response, '/oferta/detalles/{}/'.format(oferta.id))
+        self.assertEqual(numero_solicitudes_antes, numero_solicitudes_despues)
+        try:
+            solicitud_creada = Solicitud.objects.get(usuario=usuario, oferta=oferta)
+        except ObjectDoesNotExist as e:
+            solicitud_creada = None
+        self.assertIsNone(solicitud_creada)
+        # El usuario se desloguea
+        self.logout()
+
     # Un usuario solicita una oferta sin estar autenticado
     def test_solicita_oferta_sin_autenticar(self):
         # Se inicializan variables
@@ -1544,5 +1621,8 @@ class OfertaTestCase(TestCase):
         self.assertEqual(numero_solicitudes_antes, numero_solicitudes_despues)
         # El usuario se desloguea
         self.logout()
+
+
+
 
     

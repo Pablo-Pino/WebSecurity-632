@@ -51,11 +51,46 @@ class DetallesPerfilView(View):
             return HttpResponseRedirect(reverse('home'))
         # Si se encuentra el usuario, se buscan sus anexos y se le muestra su perfil
         anexos = Anexo.objects.filter(usuario_id = usuario.id).order_by('id')
+        # Se obtienen las actividades_realizadas por el usuario
+        actividades_realizadas = usuario.actividades_realizadas.all()
         context.update({
             'usuario': usuario,
+            'usuario_perfil': usuario,
             'anexos': anexos,
+            'actividades_realizadas_detalles': actividades_realizadas,
         })
         return render(request, self.template_name, context)
+
+class DetallesPerfilAjenoView(View):
+    template_name = 'perfil/detalles_perfil.html'
+
+    def get(self, request, usuario_id):
+        context = {}
+        # Se busca el usuario
+        try:
+            usuario = Usuario.objects.get(django_user_id = request.user.id)
+        # Si no se encuentra el usuario, se redirige a la pagina principal
+        except ObjectDoesNotExist as e:
+            messages.error(request, 'Se debe estar autenticado para acceder al perfil de otro usuario')
+            return HttpResponseRedirect(reverse('home'))
+        try:
+            usuario_perfil = Usuario.objects.get(pk=usuario_id)
+        # Si no se enecuentra el usuario cuyo perfil se quiere ver, se redirige a la pagina principal
+        except ObjectDoesNotExist as e:
+            messages.error(request, 'No se ha encontrado el usuario')
+            return HttpResponseRedirect(reverse('home'))
+        # Si se encuentra el usuario, se buscan sus anexos y se le muestra su perfil
+        anexos = Anexo.objects.filter(usuario_id = usuario_id).order_by('id')
+        # Se obtienen las actividades_realizadas por el usuario que no estan vetadas
+        actividades_realizadas = list(usuario_perfil.actividades_realizadas.filter(vetada=False))
+        context.update({
+            'usuario': usuario,
+            'usuario_perfil': usuario_perfil,
+            'anexos': anexos,
+            'actividades_realizadas_detalles': actividades_realizadas,
+        })
+        return render(request, self.template_name, context)
+
 
 class EdicionPerfilView(LoginRequiredMixin, View):
     template_name = 'perfil/edicion_perfil.html'

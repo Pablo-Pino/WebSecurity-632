@@ -14,11 +14,10 @@ from prueba1.models.oferta_models import Oferta, Solicitud
 from prueba1.models.perfil_models import Usuario
 from prueba1.services.oferta_services import crea_oferta, edita_oferta, elimina_oferta, veta_oferta, \
     levanta_veto_oferta, oferta_formulario, lista_ofertas, cierra_oferta, solicita_oferta, retira_solicitud_oferta, \
-    lista_ofertas_propias
+    lista_ofertas_propias, lista_solicitudes_propias
 
 
 class ListadoOfertaView(LoginRequiredMixin, View):
-    # No se requieren permisos para visitar esta pagina
     template_name = 'oferta/listado_ofertas.html'
 
     def get(self, request):
@@ -41,7 +40,7 @@ class ListadoOfertaView(LoginRequiredMixin, View):
             elif not oferta.borrador and not oferta.cerrada and not oferta.vetada and not oferta in ofertas_solicitadas:
                 es_solicitable = True
                 for actividad_requerida in oferta.actividades.all():
-                    if not actividad_requerida in usuario.actividades_realizadas.all():
+                    if not actividad_requerida in usuario.actividades_realizadas.all() or usuario == oferta.autor:
                         es_solicitable = False
                         break
                 if es_solicitable:
@@ -52,6 +51,7 @@ class ListadoOfertaView(LoginRequiredMixin, View):
             'usuario': usuario,
             'ofertas_solicitables': ofertas_solicitables,
             'ofertas_retirables': ofertas_retirables,
+            'titulo_pagina': 'Listado de ofertas',
         })
         return render(request, self.template_name, context)
 
@@ -71,6 +71,7 @@ class ListadoOfertaPropiaView(LoginRequiredMixin, View):
         context.update({
             'ofertas': ofertas,
             'usuario': usuario,
+            'titulo_pagina': 'Mis ofertas',
         })
         return render(request, self.template_name, context)
 
@@ -96,6 +97,8 @@ class CreacionOfertaView(LoginRequiredMixin, View):
         # Se crea un objeto formulario con los paramentros de entrada dados
         form = OfertaCreacionForm(request.POST)
         # Si el formulario es valido, se trata el formulario y se crea la oferta
+        for error in form.errors.as_data()['actividades']:
+            print(error)
         if form.is_valid():
             # Se valida el formulario con mas detalle
             form.clean()
@@ -181,6 +184,7 @@ class EdicionOfertaView(LoginRequiredMixin, View):
             return res
         # Se crea un objeto formualrio en base a los datos recibidos
         form = OfertaEdicionForm(request.POST)
+        print(form.errors)
         # Si el formulario es valido, se trata el formulario y se edita la oferta
         if form.is_valid():
             # Se trata el formulario con más detalle
@@ -291,6 +295,10 @@ class DetallesOfertaView(View):
                     if not actividad_requerida in usuario.actividades_realizadas.all():
                         solicitable = False
                         break
+        solicitantes = []
+        if usuario == oferta.autor:
+            for solicitud in list(Solicitud.objects.filter(oferta=oferta)):
+                solicitantes.append(solicitud.usuario)
         # Se añaden al contexto la oferta y el usuario
         context.update({
             'oferta': oferta,
@@ -298,6 +306,7 @@ class DetallesOfertaView(View):
             'actividades': oferta.actividades.all(),
             'retirable': retirable,
             'solicitable': solicitable,
+            'solicitantes': solicitantes,
         })
         # Se muestra la vista de detalles
         return render(request, self.template_name, context)
@@ -451,6 +460,30 @@ class CierreOfertaView(LoginRequiredMixin, View):
         # En caso de éxito, se redirige al usuario a los detalles de la oferta con un mensaje de éxito
         messages.success(request, 'Se ha cerrado la oferta con éxito')
         return HttpResponseRedirect(reverse('oferta_detalles', kwargs = {'oferta_id': oferta_id}))
+
+class ListadoSolicitudPropiaView(LoginRequiredMixin, View):
+    template_name = 'oferta/listado_ofertas.html'
+
+    def get(self, request):
+        context = {}
+        # Se consulta que usuario esta autenticado en este momento
+        try:
+            usuario = Usuario.objects.get(django_user_id=request.user.id)
+        except ObjectDoesNotExist:
+            usuario = None
+        ofertas = lista_solicitudes_propias(request)
+        ofertas_retirables = []
+        for oferta in ofertas:
+            if not oferta.cerrada and not oferta.vetada:
+                ofertas_retirables.append(oferta)
+        # Se añaden al contexto las oferta y el usuario y se muestra el listado
+        context.update({
+            'ofertas': ofertas,
+            'usuario': usuario,
+            'ofertas_retirables': ofertas_retirables,
+            'titulo_pagina': 'Mis solicitudes',
+        })
+        return render(request, self.template_name, context)
 
 class SolicitudOfertaView(LoginRequiredMixin, View):
     template_name = 'oferta/detalles_ofertas.html'
@@ -649,8 +682,12 @@ def comprueba_solicitar_oferta(request, oferta_id):
     if oferta.cerrada:
         messages.error(request, 'No se puede solicitar una oferta que está cerrada')
         return HttpResponseRedirect(reverse('oferta_detalles', kwargs={'oferta_id': oferta_id}))
-    # Comprueba que el usuario no tenga ya una solicitud en la oferta
+    # Comprueba que el usuario no sea el autor de la oferta
     usuario = Usuario.objects.get(django_user__id=request.user.id)
+    if usuario == oferta.autor:
+        messages.error(request, 'No se puede solicitar una oferta de la que se es autor')
+        return HttpResponseRedirect(reverse('oferta_detalles', kwargs={'oferta_id': oferta_id}))
+    # Comprueba que el usuario no tenga ya una solicitud en la oferta
     tiene_solicitud = True
     try:
         Solicitud.objects.get(usuario=usuario, oferta=oferta)

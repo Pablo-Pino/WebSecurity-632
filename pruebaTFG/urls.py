@@ -20,8 +20,9 @@ from prueba1.views.actividad_views import ListadoActividadesView, CreacionActivi
     ListadoActividadesPropiasView
 from prueba1.views.oferta_views import ListadoOfertaView, CreacionOfertaView, DetallesOfertaView, EdicionOfertaView, \
     EliminacionOfertaView, VetoOfertaView, LevantamientoVetoOfertaView, CierreOfertaView, SolicitudOfertaView, \
-    RetiroSolicitudOfertaView, ListadoOfertaPropiaView
-from prueba1.views.perfil_views import RegistroUsuarioView, DetallesPerfilView, EdicionPerfilView, CreacionAnexoView, EdicionAnexoView, EliminacionAnexoView
+    RetiroSolicitudOfertaView, ListadoOfertaPropiaView, ListadoSolicitudPropiaView
+from prueba1.views.perfil_views import RegistroUsuarioView, DetallesPerfilView, EdicionPerfilView, CreacionAnexoView, \
+    EdicionAnexoView, EliminacionAnexoView, DetallesPerfilAjenoView
 from prueba1.views.sesionactividad_views import SesionActividadComienzo, SesionActividadFinal
 from prueba1.views.views import EjercicioMock1View, EjercicioMock2View, EjercicioMock3View
 from prueba1.views.views import HomeView
@@ -48,6 +49,7 @@ urlpatterns = [
     path('actividad/veto/<int:actividad_id>/', VetoActividadesView.as_view(), name='actividad_veto'),
     path('actividad/levantamiento_veto/<int:actividad_id>/', LevantamientoVetoActividadesView.as_view(), name='actividad_levantamiento_veto'),
     path('perfil/detalles/', DetallesPerfilView.as_view(), name = 'perfil_detalles'),
+    path('perfil/detalles/<int:usuario_id>/', DetallesPerfilAjenoView.as_view(), name = 'perfil_detalles_ajeno'),
     path('perfil/edicion/', EdicionPerfilView.as_view(), name = 'perfil_edicion'),
     path('oferta/listado/', ListadoOfertaView.as_view(), name='oferta_listado'),
     path('oferta/listado_propio/', ListadoOfertaPropiaView.as_view(), name='oferta_listado_propio'),
@@ -58,8 +60,9 @@ urlpatterns = [
     path('oferta/veto/<int:oferta_id>/', VetoOfertaView.as_view(), name='oferta_veto'),
     path('oferta/levantamiento_veto/<int:oferta_id>/', LevantamientoVetoOfertaView.as_view(), name='oferta_levantamiento_veto'),
     path('oferta/cierre/<int:oferta_id>/', CierreOfertaView.as_view(), name='oferta_cierre'),
-    path('oferta/solicitud/<int:oferta_id>/', SolicitudOfertaView.as_view(), name='solicitud_oferta'),
-    path('oferta/retiro_solicitud/<int:oferta_id>/', RetiroSolicitudOfertaView.as_view(), name='retiro_solicitud_oferta'),
+    path('oferta/listado_solicitud_propio/', ListadoSolicitudPropiaView.as_view(), name='oferta_listado_solicitud_propio'),
+    path('oferta/solicitud/<int:oferta_id>/', SolicitudOfertaView.as_view(), name='oferta_solicitud'),
+    path('oferta/retiro_solicitud/<int:oferta_id>/', RetiroSolicitudOfertaView.as_view(), name='oferta_retiro_solicitud'),
     path('anexo/creacion_edicion/', CreacionAnexoView.as_view(), name = 'anexo_creacion'),
     path('anexo/creacion_edicion/<int:anexo_id>/', EdicionAnexoView.as_view(), name = 'anexo_edicion'),
     path('anexo/eliminacion/<int:anexo_id>/', EliminacionAnexoView.as_view(), name = 'anexo_eliminacion'),

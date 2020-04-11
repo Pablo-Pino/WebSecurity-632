@@ -26,7 +26,7 @@
 
         <br>
 
-        <fieldset><legend>Actividades</legend>
+        <fieldset id="fieldset_actividades"><legend>Actividades</legend>
             <br>
             {% for actividad in actividades %}
                 <fieldset>
@@ -36,8 +36,23 @@
                 </fieldset>
                 <br>
             {% endfor %}
-
         </fieldset>
+
+        {% if usuario == oferta.autor and not oferta.borrador %}
+            <div>
+                <fieldset id="fieldset_solicitantes"><legend>Solicitantes</legend>
+                <br>
+                {% for solicitante in solicitantes %}
+                    <fieldset>
+                        <p>{{ solicitante.django_user.first_name }} {{ solicitante.django_user.last_name }}</p>
+                        <p>{{ solicitante.django_user.email }}</p>
+                        <p><a href="/perfil/detalles/{{solicitante.id}}/">Perfil del solicitante</a></p>
+                    </fieldset>
+                    <br>
+                {% endfor %}
+                </fieldset>
+            </div>
+        {% endif %}
 
     </div>
 
@@ -49,7 +64,7 @@
             <button id="button_eliminar" onclick="alerta_redireccion('Desea eliminar esta oferta ?', '/oferta/eliminacion/{{ oferta.id }}/')">Eliminar oferta</button>
         </td>
     {% endif %}
-    {% if not oferta.borrador and oferta.autor == usuario and not oferta.vetada and not oferta.cerrada %}
+    {% if oferta.autor == usuario and not oferta.borrador and not oferta.vetada and not oferta.cerrada %}
         <td>
             <button id="button_cerrar" onclick="alerta_redireccion('Desea cerrar esta oferta ?', '/oferta/cierre/{{ oferta.id }}/')">Cerrar oferta</button>
         </td>

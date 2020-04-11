@@ -32,17 +32,44 @@ class PerfilTestCase(TestCase):
         password = 'usuario1'
         usuario_esperado = Usuario.objects.get(django_user__username = username)
         anexos_esperados = list(Anexo.objects.filter(usuario = usuario_esperado).order_by('id'))
+        actividades_realizadas_esperadas = list(usuario_esperado.actividades_realizadas.all())
         self.login(username, password)
         # Se accede al perfil del usuario
         response = self.client.get(reverse('perfil_detalles'))
         # Se obtienen los valores recibidos
-        usuario_recibido = response.context['usuario']
-        anexos_recibidos = list(response.context['anexos'].order_by('id'))
+        usuario_recibido = response.context['usuario_perfil']
+        anexos_recibidos = list(response.context['anexos'])
+        actividades_realizadas_recibidas = list(response.context['actividades_realizadas_detalles'])
         # Se comprueba que se ha accedido correctemente a la página de detalles del perfil y que
         # se han obtenido los datos correctos
         self.assertEqual(response.status_code, 200)
         self.assertEqual(usuario_recibido, usuario_esperado)
-        self.assertEqual(anexos_recibidos, anexos_esperados)
+        self.assertListEqual(anexos_recibidos, anexos_esperados)
+        self.assertListEqual(actividades_realizadas_esperadas, actividades_realizadas_recibidas)
+        # El usuario se desloguea
+        self.logout()
+
+    # Un usuario accede a los detalles del perfil de otro usuario
+    def test_detalles_perfil_ajeno(self):
+        # El usuario se loguea y se inicializan las variables
+        username = 'usuario1'
+        password = 'usuario1'
+        usuario_esperado = Usuario.objects.exclude(django_user__username=username).first()
+        anexos_esperados = list(Anexo.objects.filter(usuario=usuario_esperado).order_by('id'))
+        actividades_realizadas_esperadas = list(usuario_esperado.actividades_realizadas.filter(vetada=False))
+        usuario = self.login(username, password)
+        # Se accede al perfil del usuario
+        response = self.client.get(reverse('perfil_detalles_ajeno', kwargs={'usuario_id': usuario_esperado.id}))
+        # Se obtienen los valores recibidos
+        usuario_recibido = response.context['usuario_perfil']
+        anexos_recibidos = list(response.context['anexos'])
+        actividades_realizadas_recibidas = response.context['actividades_realizadas_detalles']
+        # Se comprueba que se ha accedido correctemente a la página de detalles del perfil y que
+        # se han obtenido los datos correctos
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(usuario_recibido, usuario_esperado)
+        self.assertListEqual(anexos_recibidos, anexos_esperados)
+        self.assertListEqual(actividades_realizadas_recibidas, actividades_realizadas_esperadas)
         # El usuario se desloguea
         self.logout()
 
