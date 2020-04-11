@@ -1,16 +1,16 @@
 {% extends "master_page/master_page.html" %}
 
-{% block title %}Perfil de {{ usuario.django_user.username }}{% endblock %}
+{% block title %}Perfil de {{ usuario_perfil.django_user.username }}{% endblock %}
 
 {% block body %}
 
     <div id='id_body_detalles_perfil'>
 
-        <p>Nombre : {{ usuario.django_user.first_name }}</p>
-        <p>Apellidos : {{ usuario.django_user.last_name }}</p>
-        <p>Email : {{ usuario.django_user.email }}</p>
-        <p>Telefono : {{ usuario.telefono }}</p>
-        <p>Empresa/equipo : {{ usuario.empresa_u_equipo }}</p>        
+        <p>Nombre : {{ usuario_perfil.django_user.first_name }}</p>
+        <p>Apellidos : {{ usuario_perfil.django_user.last_name }}</p>
+        <p>Email : {{ usuario_perfil.django_user.email }}</p>
+        <p>Telefono : {{ usuario_perfil.telefono }}</p>
+        <p>Empresa/equipo : {{ usuario_perfil.empresa_u_equipo }}</p>
 
         <fieldset id='id_fieldset_anexos'><legend>Anexos</legend>
             <ul>
@@ -25,6 +25,10 @@
                 {% endfor %}
             </ul>
             <button onclick="window.location.href = '/anexo/creacion_edicion/'">Crear nuevo anexo</button>
+        </fieldset>
+
+        <fieldset id='id_fieldset_actividades'><legend>Listado de actividades resueltas por {{ usuario_perfil.django_user.username}}</legend>
+            {% include 'blocks/lista_listado_actividades.html' with actividades=actividades_realizadas_detalles usuario=usuario %}
         </fieldset>
 
     </div>

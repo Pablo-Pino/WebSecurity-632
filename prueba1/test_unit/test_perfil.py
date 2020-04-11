@@ -32,17 +32,44 @@ class PerfilTestCase(TestCase):
         password = 'usuario1'
         usuario_esperado = Usuario.objects.get(django_user__username = username)
         anexos_esperados = list(Anexo.objects.filter(usuario = usuario_esperado).order_by('id'))
+        actividades_realizadas_esperadas = list(usuario_esperado.actividades_realizadas.all())
         self.login(username, password)
         # Se accede al perfil del usuario
         response = self.client.get(reverse('perfil_detalles'))
         # Se obtienen los valores recibidos
-        usuario_recibido = response.context['usuario']
-        anexos_recibidos = list(response.context['anexos'].order_by('id'))
+        usuario_recibido = response.context['usuario_perfil']
+        anexos_recibidos = list(response.context['anexos'])
+        actividades_realizadas_recibidas = list(response.context['actividades_realizadas_detalles'])
         # Se comprueba que se ha accedido correctemente a la página de detalles del perfil y que
         # se han obtenido los datos correctos
         self.assertEqual(response.status_code, 200)
         self.assertEqual(usuario_recibido, usuario_esperado)
-        self.assertEqual(anexos_recibidos, anexos_esperados)
+        self.assertListEqual(anexos_recibidos, anexos_esperados)
+        self.assertListEqual(actividades_realizadas_esperadas, actividades_realizadas_recibidas)
+        # El usuario se desloguea
+        self.logout()
+
+    # Un usuario accede a los detalles del perfil de otro usuario
+    def test_detalles_perfil_ajeno(self):
+        # El usuario se loguea y se inicializan las variables
+        username = 'usuario1'
+        password = 'usuario1'
+        usuario_esperado = Usuario.objects.exclude(django_user__username=username).first()
+        anexos_esperados = list(Anexo.objects.filter(usuario=usuario_esperado).order_by('id'))
+        actividades_realizadas_esperadas = list(usuario_esperado.actividades_realizadas.filter(vetada=False))
+        usuario = self.login(username, password)
+        # Se accede al perfil del usuario
+        response = self.client.get(reverse('perfil_detalles_ajeno', kwargs={'usuario_id': usuario_esperado.id}))
+        # Se obtienen los valores recibidos
+        usuario_recibido = response.context['usuario_perfil']
+        anexos_recibidos = list(response.context['anexos'])
+        actividades_realizadas_recibidas = response.context['actividades_realizadas_detalles']
+        # Se comprueba que se ha accedido correctemente a la página de detalles del perfil y que
+        # se han obtenido los datos correctos
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(usuario_recibido, usuario_esperado)
+        self.assertListEqual(anexos_recibidos, anexos_esperados)
+        self.assertListEqual(actividades_realizadas_recibidas, actividades_realizadas_esperadas)
         # El usuario se desloguea
         self.logout()
 
@@ -181,6 +208,8 @@ class PerfilTestCase(TestCase):
         self.assertRedirects(response, reverse('perfil_detalles'))
         self.assertEquals(numero_anexos_antes + 1, numero_anexos_despues)
         self.assertEquals(anexo_creado in anexos_recibidos, True)
+        self.assertEqual(anexo_creado.usuario, usuario)
+        self.assertEqual(anexo_creado.anexo, anexo)
         # El usuario se desloguea
         self.logout()
 
@@ -279,7 +308,8 @@ class PerfilTestCase(TestCase):
         # se han producido cambios en el anexo
         self.assertEqual(response.status_code, 302)
         self.assertRedirects(response, '/login/?next=/anexo/creacion_edicion/{}/'.format(anexo_dado.id))
-        self.assertEqual(anexo_dado, anexo_recibido)
+        self.assertEqual(anexo_dado.anexo, anexo_recibido.anexo)
+        self.assertEqual(anexo_dado.usuario, anexo_recibido.usuario)
         # El usuario se desloguea
         self.logout()
 
@@ -302,7 +332,8 @@ class PerfilTestCase(TestCase):
         # Esto se debe a que un usuario no puede editar un anexo que no le pertenezca
         self.assertEqual(response.status_code, 302)
         self.assertRedirects(response, reverse('perfil_detalles'))
-        self.assertEqual(anexo_dado, anexo_recibido)
+        self.assertEqual(anexo_dado.anexo, anexo_recibido.anexo)
+        self.assertEqual(anexo_dado.usuario, anexo_recibido.usuario)
         # El usuario se desloguea
         self.logout()
 
@@ -324,7 +355,8 @@ class PerfilTestCase(TestCase):
         # Se comprueba que el usuario permanece correctamente en el formulario y que el anexo no ha sufrido cambios, 
         # debido a que se ha producido un error de validación
         self.assertEqual(response.status_code, 200)
-        self.assertEquals(anexo_recibido, anexo_dado)
+        self.assertEquals(anexo_recibido.anexo, anexo_dado.anexo)
+        self.assertEqual(anexo_recibido.usuario, anexo_dado.usuario)
         # El usuario se desloguea
         self.logout()
 
@@ -335,6 +367,7 @@ class PerfilTestCase(TestCase):
         password = 'usuario1'
         usuario = Usuario.objects.get(django_user__username = username)
         anexo_dado = Anexo.objects.filter(usuario = usuario).first()
+        numero_anexos_antes = Anexo.objects.count()
         self.login(username, password)
         # Se accede a la eliminación del anexo
         response = self.client.get(reverse('anexo_eliminacion', kwargs = {'anexo_id': anexo_dado.id}))
@@ -345,10 +378,12 @@ class PerfilTestCase(TestCase):
             anexo_recibido = Anexo.objects.get(pk = anexo_dado.id)
         except ObjectDoesNotExist as e:
             anexo_eliminado = True
+        numero_anexos_despues = Anexo.objects.count()
         # Se comprueba que el usuario ha sido redirigido a los detalles de su perfil y que el anexo ha sido eliminado
-        self.assertEqual(response.status_code, 302)
+        self.assertEquals(response.status_code, 302)
         self.assertRedirects(response, reverse('perfil_detalles'))
         self.assertEquals(anexo_eliminado, True)
+        self.assertEquals(numero_anexos_antes, numero_anexos_despues + 1)
         # El usuario se desloguea
         self.logout()
 
@@ -372,6 +407,7 @@ class PerfilTestCase(TestCase):
     def test_eliminar_anexo_sin_autenticar(self):
         # El usuario se loguea y se inicializan las variables
         anexo_dado = Anexo.objects.all().first()
+        numero_anexos_antes = Anexo.objects.count()
         # Se accede a la elimainción del anexo
         response = self.client.get(reverse('anexo_eliminacion', kwargs = {'anexo_id': anexo_dado.id}))
         # Se obtienen los valores recibidos. Para saber si el anexo ha sido eliminado o no se  trata de captura la 
@@ -381,18 +417,21 @@ class PerfilTestCase(TestCase):
             anexo_recibido = Anexo.objects.get(pk = anexo_dado.id)
         except ObjectDoesNotExist as e:
             anexo_eliminado = True
+        numero_anexos_despues = Anexo.objects.count()
         # Se comprueba que el usuario ha sido redirigido a la página de login y que el anexo no ha sido eliminado. Esto
         # se debe a que el usuario debe estar autenticado para eliminar un anexo.
         self.assertEqual(response.status_code, 302)
         self.assertRedirects(response, '/login/?next=/anexo/eliminacion/{}/'.format(anexo_dado.id))
         self.assertEqual(anexo_eliminado, False)
+        self.assertEqual(numero_anexos_antes, numero_anexos_despues)
 
-
+    # Un usuario elimina un anexo que no le pertenece
     def test_eliminar_anexo_ajeno(self):
         # El usuario se loguea
         username = 'usuario1'
         password = 'usuario1'
         usuario = self.login(username, password)
+        numero_anexos_antes = Anexo.objects.count()
         # Se inicializan las variables necesarias para el test
         anexo_dado = Anexo.objects.exclude(usuario = usuario).first()
         # Se accede a la edicón del perfil del usuario
@@ -404,11 +443,13 @@ class PerfilTestCase(TestCase):
             anexo_recibido = Anexo.objects.get(pk = anexo_dado.id)
         except ObjectDoesNotExist as e:
             anexo_eliminado = True
+        numero_anexos_despues = Anexo.objects.count()
         # Se comprueba que el usuario ha sido redirigido a los detalles del perfil y que el anexo no ha sido eliminado.
         # Esto se debe a que un usuario no puede eliminar un anexo que no le pertenece.
-        self.assertEqual(response.status_code, 302)
+        self.assertEquals(response.status_code, 302)
         self.assertRedirects(response, reverse('perfil_detalles'))
         self.assertEquals(anexo_eliminado, False)
+        self.assertEquals(numero_anexos_antes, numero_anexos_despues)
         # El usuario se desloguea
         self.logout()
 
