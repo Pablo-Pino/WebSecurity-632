@@ -1,0 +1,187 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ChangeListManager">
+    <list default="true" id="715bfbc1-ba28-47fd-804c-ea8e9275dcd9" name="Default Changelist" comment="">
+      <change beforePath="$PROJECT_DIR$/dumpdata.json" beforeDir="false" afterPath="$PROJECT_DIR$/dumpdata.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/geckodriver.log" beforeDir="false" afterPath="$PROJECT_DIR$/geckodriver.log" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/populate_database.py" beforeDir="false" afterPath="$PROJECT_DIR$/populate_database.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/prueba1/forms/oferta_forms.py" beforeDir="false" afterPath="$PROJECT_DIR$/prueba1/forms/oferta_forms.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/prueba1/models/oferta_models.py" beforeDir="false" afterPath="$PROJECT_DIR$/prueba1/models/oferta_models.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/prueba1/services/oferta_services.py" beforeDir="false" afterPath="$PROJECT_DIR$/prueba1/services/oferta_services.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/prueba1/templates/actividad/listado_actividades.html" beforeDir="false" afterPath="$PROJECT_DIR$/prueba1/templates/actividad/listado_actividades.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/prueba1/templates/master_page/master_page.html" beforeDir="false" afterPath="$PROJECT_DIR$/prueba1/templates/master_page/master_page.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/prueba1/templates/master_page/menu.html" beforeDir="false" afterPath="$PROJECT_DIR$/prueba1/templates/master_page/menu.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/prueba1/templates/oferta/detalles_ofertas.html" beforeDir="false" afterPath="$PROJECT_DIR$/prueba1/templates/oferta/detalles_ofertas.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/prueba1/templates/oferta/listado_ofertas.html" beforeDir="false" afterPath="$PROJECT_DIR$/prueba1/templates/oferta/listado_ofertas.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/prueba1/templates/perfil/detalles_perfil.html" beforeDir="false" afterPath="$PROJECT_DIR$/prueba1/templates/perfil/detalles_perfil.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/prueba1/test_selenium/test_actividad.py" beforeDir="false" afterPath="$PROJECT_DIR$/prueba1/test_selenium/test_actividad.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/prueba1/test_selenium/test_oferta.py" beforeDir="false" afterPath="$PROJECT_DIR$/prueba1/test_selenium/test_oferta.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/prueba1/test_selenium/test_perfil.py" beforeDir="false" afterPath="$PROJECT_DIR$/prueba1/test_selenium/test_perfil.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/prueba1/test_unit/test_oferta.py" beforeDir="false" afterPath="$PROJECT_DIR$/prueba1/test_unit/test_oferta.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/prueba1/test_unit/test_perfil.py" beforeDir="false" afterPath="$PROJECT_DIR$/prueba1/test_unit/test_perfil.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/prueba1/views/actividad_views.py" beforeDir="false" afterPath="$PROJECT_DIR$/prueba1/views/actividad_views.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/prueba1/views/oferta_views.py" beforeDir="false" afterPath="$PROJECT_DIR$/prueba1/views/oferta_views.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/prueba1/views/perfil_views.py" beforeDir="false" afterPath="$PROJECT_DIR$/prueba1/views/perfil_views.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/prueba1/views/views.py" beforeDir="false" afterPath="$PROJECT_DIR$/prueba1/views/views.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pruebaTFG/copias_metodos.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pruebaTFG/urls.py" beforeDir="false" afterPath="$PROJECT_DIR$/pruebaTFG/urls.py" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="Python Script" />
+        <option value="HTML File" />
+      </list>
+    </option>
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="ProjectId" id="1Yw0TXp0NPXMKc9cKFJnLiL6az7" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showExcludedFiles" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent">
+    <property name="ASKED_ADD_EXTERNAL_FILES" value="true" />
+    <property name="DefaultHtmlFileTemplate" value="HTML File" />
+    <property name="RunOnceActivity.ShowReadmeOnStart" value="true" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$/prueba1/test_unit" />
+    <property name="settings.editor.selected.configurable" value="com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable" />
+  </component>
+  <component name="RecentsManager">
+    <key name="CopyFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/prueba1/test_unit" />
+      <recent name="$PROJECT_DIR$/prueba1/views" />
+      <recent name="$PROJECT_DIR$/prueba1/templates/actividad" />
+      <recent name="$PROJECT_DIR$/prueba1/templates/blocks" />
+      <recent name="$PROJECT_DIR$/prueba1/templates" />
+    </key>
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/prueba1/models" />
+      <recent name="$PROJECT_DIR$/prueba1/templates/oferta" />
+      <recent name="$PROJECT_DIR$" />
+    </key>
+  </component>
+  <component name="RunManager" selected="Python tests.Unittests for test_oferta.OfertaTestCase">
+    <configuration name="Unittests for test_oferta.OfertaTestCase" type="tests" factoryName="Unittests" temporary="true" nameIsGenerated="true">
+      <module name="pruebaTFG" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/prueba1/test_selenium" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="_new_additionalArguments" value="&quot;&quot;" />
+      <option name="_new_target" value="&quot;test_oferta.OfertaTestCase&quot;" />
+      <option name="_new_targetType" value="&quot;PYTHON&quot;" />
+      <method v="2" />
+    </configuration>
+    <configuration name="Unittests for test_oferta.OfertaTestCase.test_retira_solicitud_oferta_inexistente" type="tests" factoryName="Unittests" temporary="true" nameIsGenerated="true">
+      <module name="pruebaTFG" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/prueba1/test_selenium" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="_new_additionalArguments" value="&quot;&quot;" />
+      <option name="_new_target" value="&quot;test_oferta.OfertaTestCase.test_retira_solicitud_oferta_inexistente&quot;" />
+      <option name="_new_targetType" value="&quot;PYTHON&quot;" />
+      <method v="2" />
+    </configuration>
+    <recent_temporary>
+      <list>
+        <item itemvalue="Python tests.Unittests for test_oferta.OfertaTestCase" />
+        <item itemvalue="Python tests.Unittests for test_oferta.OfertaTestCase.test_retira_solicitud_oferta_inexistente" />
+      </list>
+    </recent_temporary>
+  </component>
+  <component name="SvnConfiguration">
+    <configuration />
+  </component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="715bfbc1-ba28-47fd-804c-ea8e9275dcd9" name="Default Changelist" comment="" />
+      <created>1583838357583</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1583838357583</updated>
+    </task>
+    <servers />
+  </component>
+  <component name="WindowStateProjectService">
+    <state x="174" y="55" key="#com.intellij.execution.impl.EditConfigurationsDialog" timestamp="1586081739884">
+      <screen x="67" y="27" width="1299" height="741" />
+    </state>
+    <state x="174" y="55" key="#com.intellij.execution.impl.EditConfigurationsDialog/67.27.1299.741@67.27.1299.741" timestamp="1586081739884" />
+    <state x="330" y="201" width="762" height="390" key="#com.intellij.fileTypes.FileTypeChooser" timestamp="1585049151654">
+      <screen x="67" y="27" width="1299" height="741" />
+    </state>
+    <state x="330" y="201" width="762" height="390" key="#com.intellij.fileTypes.FileTypeChooser/67.27.1299.741@67.27.1299.741" timestamp="1585049151654" />
+    <state x="494" y="156" width="424" height="484" key="FileChooserDialogImpl" timestamp="1583838569650">
+      <screen x="67" y="27" width="1299" height="741" />
+    </state>
+    <state x="494" y="156" width="424" height="484" key="FileChooserDialogImpl/67.27.1299.741@67.27.1299.741" timestamp="1583838569650" />
+    <state width="1276" height="219" key="GridCell.Tab.0.bottom" timestamp="1586522229567">
+      <screen x="67" y="27" width="1299" height="741" />
+    </state>
+    <state width="1276" height="219" key="GridCell.Tab.0.bottom/67.27.1299.741@67.27.1299.741" timestamp="1586522229567" />
+    <state width="1276" height="219" key="GridCell.Tab.0.center" timestamp="1586522229567">
+      <screen x="67" y="27" width="1299" height="741" />
+    </state>
+    <state width="1276" height="219" key="GridCell.Tab.0.center/67.27.1299.741@67.27.1299.741" timestamp="1586522229567" />
+    <state width="1276" height="219" key="GridCell.Tab.0.left" timestamp="1586522229566">
+      <screen x="67" y="27" width="1299" height="741" />
+    </state>
+    <state width="1276" height="219" key="GridCell.Tab.0.left/67.27.1299.741@67.27.1299.741" timestamp="1586522229566" />
+    <state width="1276" height="219" key="GridCell.Tab.0.right" timestamp="1586522229567">
+      <screen x="67" y="27" width="1299" height="741" />
+    </state>
+    <state width="1276" height="219" key="GridCell.Tab.0.right/67.27.1299.741@67.27.1299.741" timestamp="1586522229567" />
+    <state width="1276" height="219" key="GridCell.Tab.1.bottom" timestamp="1586522229569">
+      <screen x="67" y="27" width="1299" height="741" />
+    </state>
+    <state width="1276" height="219" key="GridCell.Tab.1.bottom/67.27.1299.741@67.27.1299.741" timestamp="1586522229569" />
+    <state width="1276" height="219" key="GridCell.Tab.1.center" timestamp="1586522229568">
+      <screen x="67" y="27" width="1299" height="741" />
+    </state>
+    <state width="1276" height="219" key="GridCell.Tab.1.center/67.27.1299.741@67.27.1299.741" timestamp="1586522229568" />
+    <state width="1276" height="219" key="GridCell.Tab.1.left" timestamp="1586522229568">
+      <screen x="67" y="27" width="1299" height="741" />
+    </state>
+    <state width="1276" height="219" key="GridCell.Tab.1.left/67.27.1299.741@67.27.1299.741" timestamp="1586522229568" />
+    <state width="1276" height="219" key="GridCell.Tab.1.right" timestamp="1586522229569">
+      <screen x="67" y="27" width="1299" height="741" />
+    </state>
+    <state width="1276" height="219" key="GridCell.Tab.1.right/67.27.1299.741@67.27.1299.741" timestamp="1586522229569" />
+    <state x="205" y="33" key="SettingsEditor" timestamp="1583838575829">
+      <screen x="67" y="27" width="1299" height="741" />
+    </state>
+    <state x="205" y="33" key="SettingsEditor/67.27.1299.741@67.27.1299.741" timestamp="1583838575829" />
+    <state x="372" y="224" key="com.intellij.ide.util.TipDialog" timestamp="1586341367929">
+      <screen x="67" y="27" width="1299" height="741" />
+    </state>
+    <state x="372" y="224" key="com.intellij.ide.util.TipDialog/67.27.1299.741@67.27.1299.741" timestamp="1586341367929" />
+    <state x="366" y="27" width="690" height="741" key="com.intellij.openapi.editor.actions.MultiplePasteAction$ClipboardContentChooser" timestamp="1586518599608">
+      <screen x="67" y="27" width="1299" height="741" />
+    </state>
+    <state x="366" y="27" width="690" height="741" key="com.intellij.openapi.editor.actions.MultiplePasteAction$ClipboardContentChooser/67.27.1299.741@67.27.1299.741" timestamp="1586518599608" />
+    <state x="484" y="316" width="454" height="160" key="com.intellij.openapi.vcs.update.UpdateOrStatusOptionsDialogupdate-v2" timestamp="1586373090989">
+      <screen x="67" y="27" width="1299" height="741" />
+    </state>
+    <state x="484" y="316" width="454" height="160" key="com.intellij.openapi.vcs.update.UpdateOrStatusOptionsDialogupdate-v2/67.27.1299.741@67.27.1299.741" timestamp="1586373090989" />
+    <state x="379" y="89" width="672" height="678" key="search.everywhere.popup" timestamp="1586611521033">
+      <screen x="67" y="27" width="1299" height="741" />
+    </state>
+    <state x="379" y="89" width="672" height="678" key="search.everywhere.popup/67.27.1299.741@67.27.1299.741" timestamp="1586611521033" />
+  </component>
+</project>
