@@ -1,7 +1,7 @@
 from django.contrib.auth.models import User
-from prueba1.models.actividad_models import Actividad, SesionActividad
-from prueba1.models.perfil_models import Usuario, Anexo
-from prueba1.models.oferta_models import Oferta, Solicitud
+from WebSecurityApp.models.actividad_models import Actividad, SesionActividad
+from WebSecurityApp.models.perfil_models import Usuario, Anexo
+from WebSecurityApp.models.oferta_models import Oferta, Solicitud
 from datetime import date
 
 # DJANGO USERS Y USUARIOS
