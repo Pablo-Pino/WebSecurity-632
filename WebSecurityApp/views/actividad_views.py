@@ -15,6 +15,7 @@ from WebSecurityApp.models.actividad_models import Actividad
 from WebSecurityApp.models.perfil_models import Usuario
 from WebSecurityApp.services.actividad_services import crea_actividad, edita_actividad, elimina_actividad, veta_actividad, \
         levanta_veto_actividad, actividad_formulario, listado_actividades, listado_actividades_propias
+from WebSecurityServer.settings import numero_objetos_por_pagina
 
 
 class ListadoActividadesView(LoginRequiredMixin, View):
@@ -29,7 +30,7 @@ class ListadoActividadesView(LoginRequiredMixin, View):
         except ObjectDoesNotExist:
             usuario = None
         actividades = listado_actividades(request)
-        paginator = Paginator(actividades, 3)
+        paginator = Paginator(actividades, numero_objetos_por_pagina)
         page_number = request.GET.get('page')
         page_obj_actividades = paginator.get_page(page_number)
         # Se añaden al contexto las actividades y el usuario y se muestra el listado
@@ -53,7 +54,7 @@ class ListadoActividadesPropiasView(LoginRequiredMixin, View):
         except ObjectDoesNotExist:
             usuario = None
         actividades = listado_actividades_propias(request)
-        paginator = Paginator(actividades, 3)
+        paginator = Paginator(actividades, numero_objetos_por_pagina)
         page_number = request.GET.get('page')
         page_obj_actvidades = paginator.get_page(page_number)
         # Se añaden al contexto las actividades y el usuario y se muestra el listado

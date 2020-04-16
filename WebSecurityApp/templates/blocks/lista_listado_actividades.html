@@ -1,8 +1,8 @@
-<div>
+<div id="id_div_listado_actividades">
 
     {% include 'blocks/pagination.html' with page_obj=page_obj_actividades %}
 
-    <table class="table">
+    <table class="table" id="id_table_actividades">
         <tr>
             <th>Titulo</th>
             <th>Descripcion</th>
@@ -25,11 +25,11 @@
                         <td>{{ a.fecha_creacion | date:"SHORT_DATE_FORMAT" }}</td>
                         <td>{{ a.autor.django_user.first_name }} {{ a.autor.django_user.last_name }}</td>
                         <td>
-                            <button onclick="window.location.href = '/actividad/detalles/{{ a.id }}/'">Detalles de la actividad</button>
+                            <button id="button_detalles_{{ a.id }}" onclick="window.location.href = '/actividad/detalles/{{ a.id }}/'">Detalles de la actividad</button>
                         </td>
                         {% if a.borrador and a.autor == usuario %}
                             <td>
-                                <button onclick="window.location.href = '/actividad/edicion/{{ a.id }}/'">Editar actividad</button>
+                                <button id="button_editar_{{ a.id }}" onclick="window.location.href = '/actividad/edicion/{{ a.id }}/'">Editar actividad</button>
                             </td>
                             <td>
                                 <button id="button_eliminar_{{ a.id }}" onclick="alerta_redireccion('Desea eliminar esta actividad ?', '/actividad/eliminacion/{{ a.id }}/')">Eliminar actividad</button>

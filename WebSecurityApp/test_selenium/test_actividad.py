@@ -14,6 +14,7 @@ from selenium.webdriver.support.wait import WebDriverWait
 
 from WebSecurityApp.models.perfil_models import Usuario
 from WebSecurityApp.models.actividad_models import Actividad
+from WebSecurityApp.test_selenium.utils import evaluar_columnas_listado_actividades, buscar_boton_listado
 from WebSecurityApp.views.actividad_views import CreacionActividadesView
 
 import datetime
@@ -51,7 +52,7 @@ class ActividadTestCase(StaticLiveServerTestCase):
         self.selenium.get('%s%s' % (self.live_server_url, '/logout'))
 
 
-    '''
+
     # TESTS DE LISTADO
 
     # Un usuario que no es administrador accede al listado de actividades
@@ -64,9 +65,9 @@ class ActividadTestCase(StaticLiveServerTestCase):
         usuario = Usuario.objects.get(django_user__username = 'usuario1')
         actividades_esperadas = Actividad.objects.filter(Q(autor=usuario) | Q(borrador=False, vetada=False)).distinct().order_by('id')
         actividades_mostradas = self.selenium.find_elements_by_tag_name('tr')
-        self.assertEqual(len(actividades_esperadas), len(actividades_mostradas) - 1)
+        # self.assertEqual(len(actividades_esperadas), len(actividades_mostradas) - 1)
         # Se comprueba que el contenido de la tabla es correcto
-        self.evaluar_columnas_listado_actividades(self.selenium, actividades_esperadas, usuario, True)
+        evaluar_columnas_listado_actividades(self, actividades_esperadas, usuario, True, 'page')
         # Se cierra sesion
         self.logout()
 
@@ -80,9 +81,9 @@ class ActividadTestCase(StaticLiveServerTestCase):
         usuario = Usuario.objects.get(django_user__username = 'usuario2')
         actividades_esperadas = Actividad.objects.filter(Q(autor=usuario) | Q(borrador=False)).distinct().order_by('id')
         actividades_mostradas = self.selenium.find_elements_by_tag_name('tr')
-        self.assertEqual(len(actividades_esperadas), len(actividades_mostradas) - 1)
+        # self.assertEqual(len(actividades_esperadas), len(actividades_mostradas) - 1)
         # Se comprueba que el contenido de la tabla es correcto
-        self.evaluar_columnas_listado_actividades(self.selenium, actividades_esperadas, usuario, True)
+        evaluar_columnas_listado_actividades(self, actividades_esperadas, usuario, True, 'page')
         # Se cierra sesion
         self.logout()
 
@@ -95,97 +96,14 @@ class ActividadTestCase(StaticLiveServerTestCase):
         # Se comprueba que aparecen las actividades correctas
         actividades_esperadas = Actividad.objects.filter(autor=usuario).distinct().order_by('id')
         actividades_mostradas = self.selenium.find_elements_by_tag_name('tr')
-        self.assertEqual(len(actividades_esperadas), len(actividades_mostradas) - 1)
+        # self.assertEqual(len(actividades_esperadas), len(actividades_mostradas) - 1)
         # Se comprueba que el contenido de la tabla es correcto
-        self.evaluar_columnas_listado_actividades(self.selenium, actividades_esperadas, usuario, False)
+        evaluar_columnas_listado_actividades(self, actividades_esperadas, usuario, False, 'page')
         # Se cierra sesion
         self.logout()
-    '''
-    def evaluar_columnas_listado_actividades(self, element, actividades_esperadas, usuario, resalta_resueltas):
-        print('actividad')
-        i = 2
-        # Por cada una de las actividades que debe aparecer
-        for actividad in actividades_esperadas:
-            fila = element.find_element_by_xpath('//tr[{}]'.format(i))
-            # Si la actividad está vetada, debe aparecer con unn background rojizo
-            if actividad.vetada:
-                self.assertEqual(fila.value_of_css_property('background-color'), 'rgba(255, 0, 0, 0.4)')
-            # Si la actividad está resuelta y no vetada, entonces el background es verdoso
-            # Esto solo se aplica cuando no se estan listando las propias ofertas
-            elif actividad in usuario.actividades_realizadas.all() and resalta_resueltas:
-                self.assertEqual(fila.value_of_css_property('background-color'), 'rgba(0, 255, 0, 0.4)')
-            # Se comprueba el título
-            titulo = element.find_element_by_xpath('//tbody/child::tr[{}]/child::td[1]'.format(i)).text
-            self.assertEqual(titulo, actividad.titulo)
-            # Se comprueba las descripción
-            descripcion = element.find_element_by_xpath('//tbody/child::tr[{}]/child::td[2]'.format(i)).text
-            self.assertEqual(descripcion, actividad.descripcion)
-            # Se comprueba la fecha de creación
-            fecha_creacion = element.find_element_by_xpath('//tbody/child::tr[{}]/child::td[3]'.format(i)).text
-            self.assertEqual(fecha_creacion, actividad.fecha_creacion.strftime('%d/%m/%Y'))
-            # Se comprueba el autor
-            autor = element.find_element_by_xpath('//tbody/child::tr[{}]/child::td[4]'.format(i)).text
-            self.assertEqual(autor, '{} {}'.format(actividad.autor.django_user.first_name, actividad.autor.django_user.last_name))
-            # Se comprueba que está el botón de detalles
-            boton_detalles = element.find_element_by_xpath('//tbody/child::tr[{}]/child::td[5]/child::button'.format(i))
-            self.assertEqual(boton_detalles.get_attribute('onclick'), 'window.location.href = \'/actividad/detalles/{}/\''.format(actividad.id))
-            j = 6
-            # Se comprueba que esté el botón de editar si procede
-            try:
-                boton_editar = element.find_element_by_xpath('//tbody/child::tr[{}]/child::td[{}]/child::button'.format(i, j))
-                if usuario == actividad.autor and actividad.borrador:
-                    self.assertEqual(boton_editar.get_attribute('onclick'), 'window.location.href = \'/actividad/edicion/{}/\''.format(actividad.id))
-                    boton_editar = True
-                    j = j + 1
-                else:
-                    self.assertEqual(boton_editar.get_attribute('onclick') == 'window.location.href = \'/actividad/edicion/{}/\''.format(actividad.id), False)
-                    boton_editar = False
-            except NoSuchElementException:
-                boton_editar = False
-            self.assertEqual(usuario == actividad.autor and actividad.borrador, boton_editar)
-            # Se comprueba que está el botón de eliminar si procede
-            try:
-                boton_eliminar = element.find_element_by_xpath('//tbody/child::tr[{}]/child::td[{}]/child::button'.format(i, j))
-                if usuario == actividad.autor and actividad.borrador:
-                    self.assertEqual(boton_eliminar.get_attribute('onclick'), 'alerta_redireccion(\'Desea eliminar esta actividad ?\', \'/actividad/eliminacion/{}/\')'.format(actividad.id))
-                    boton_eliminar = True
-                    j = j + 1
-                else:
-                    self.assertEqual(boton_eliminar.get_attribute('onclick') == 'alerta_redireccion(\'Desea eliminar esta actividad ?\', \'/actividad/eliminacion/{}/\')'.format(actividad.id), False)
-                    boton_eliminar = False
-            except NoSuchElementException:
-                boton_eliminar = False
-            self.assertEqual(usuario == actividad.autor and actividad.borrador, boton_eliminar)
-            # Se comprueba que está el botón de vetar si procede
-            try:
-                boton_veto = element.find_element_by_xpath('//tbody/child::tr[{}]/child::td[{}]/child::button'.format(i, j))
-                if usuario.es_admin and not actividad.borrador and not actividad.vetada:
-                    self.assertEqual(boton_veto.get_attribute('onclick'), 'window.location.href = \'/actividad/veto/{}/\''.format(actividad.id))
-                    boton_veto = True
-                    j = j + 1
-                else:
-                    self.assertEqual(boton_veto.get_attribute('onclick') == 'window.location.href = \'/actividad/veto/{}/\''.format(actividad.id), False)
-                    boton_veto = False
-            except NoSuchElementException:
-                boton_veto = False
-            self.assertEqual(usuario.es_admin and not actividad.borrador and not actividad.vetada, boton_veto)
-            # Se comprueba que está el botón de levantar veto si procede
-            try:
-                boton_levanta_veto = element.find_element_by_xpath('//tbody/child::tr[{}]/child::td[{}]/child::button'.format(i, j))
-                if usuario.es_admin and not actividad.borrador and actividad.vetada:
-                    self.assertEqual(boton_levanta_veto.get_attribute('id'), 'button_levantar_veto_{}'.format(actividad.id))
-                    boton_levanta_veto = True
-                    j = j + 1
-                else:
-                    self.assertEqual(boton_levanta_veto.get_attribute('id'), 'button_levantar_veto_{}'.format(actividad.id), False)
-                    boton_levanta_veto = False
-            except NoSuchElementException:
-                boton_levanta_veto = False
-            self.assertEqual(usuario.es_admin and not actividad.borrador and actividad.vetada, boton_levanta_veto)
-            i = i + 1
 
 
-    '''
+
     # TEST DE DETALLES
 
     # Para comprobar los botones de vetar y levantar el veto, además del motivo de veto y el enlace a la actividad
@@ -405,7 +323,7 @@ class ActividadTestCase(StaticLiveServerTestCase):
         fecha = fecha.replace('December', 'Diciembre')
         return fecha
 
-
+    
 
     # TESTS CREACIÓN
 
@@ -490,8 +408,17 @@ class ActividadTestCase(StaticLiveServerTestCase):
         # Se obtienen variables necesarias para el test
         usuario = Usuario.objects.get(django_user__username = 'usuario1')
         actividad = Actividad.objects.filter(Q(autor = usuario) & Q(borrador = True) & Q(vetada = False)).first()
+        # Se accede al listado de actvidades
+        self.selenium.get('%s%s' % (self.live_server_url, '/actividad/listado/'))
         # Se accede a la edición de la actividad
-        self.selenium.get('%s%s' % (self.live_server_url, '/actividad/edicion/{}/'.format(actividad.id)))
+        boton_editar = buscar_boton_listado(self,
+            id_listado='id_div_listado_actividades',
+            id_boton='button_editar_{}'.format(actividad.id),
+            page_param='page')
+        boton_editar.click()
+        wait_driver = WebDriverWait(self.selenium, 3)
+        wait_driver.until(
+            lambda driv: driv.current_url == '{}/actividad/edicion/{}/'.format(self.live_server_url, actividad.id))
         # Se comprueba que el título de la página es correcto
         title_text = self.selenium.find_element_by_tag_name('h1').text
         self.assertEqual('Edicion de actividades' in title_text, True)
@@ -526,8 +453,17 @@ class ActividadTestCase(StaticLiveServerTestCase):
         # Se obtienen variables necesarias para el test
         usuario = Usuario.objects.get(django_user__username = 'usuario1')
         actividad = Actividad.objects.filter(Q(autor = usuario) & Q(borrador = True) & Q(vetada = False)).first()
+        # Se accede al listado de actvidades
+        self.selenium.get('%s%s' % (self.live_server_url, '/actividad/listado/'))
         # El usuario accede a la edición de la actividad
-        self.selenium.get('%s%s' % (self.live_server_url, '/actividad/edicion/{}/'.format(actividad.id)))
+        boton_editar = buscar_boton_listado(self,
+            id_listado='id_div_listado_actividades',
+            id_boton='button_editar_{}'.format(actividad.id),
+            page_param='page')
+        boton_editar.click()
+        wait_driver = WebDriverWait(self.selenium, 3)
+        wait_driver.until(
+            lambda driv: driv.current_url == '{}/actividad/edicion/{}/'.format(self.live_server_url, actividad.id))
         # Se comprueba que el texto es correcto
         title_text = self.selenium.find_element_by_tag_name('h1').text
         self.assertEqual('Edicion de actividades' in title_text, True)
@@ -552,7 +488,7 @@ class ActividadTestCase(StaticLiveServerTestCase):
         self.assertEqual(error_enlace.text, 'Este campo es requerido.')
         # El usuario se desloguea
         self.logout()
-
+        
     # Un usuario edita una actividad si estar autenticado
     def test_editar_actividad_sin_autenticar(self):
         # Se obtienen las variables necesarias para el test
@@ -563,21 +499,22 @@ class ActividadTestCase(StaticLiveServerTestCase):
         self.assertEqual(self.selenium.current_url, self.live_server_url + '/login/?next=/actividad/edicion/{}/'.format(actividad.id))
 
     # Un usuario edita una actividad ajena
-    def test_editar_usuario_incorrecto(self):
+    def test_editar_actividad_usuario_incorrecto(self):
         # El usuario se loguea
         usuario = self.login('usuario2', 'usuario2')
         # Se obtienen variables necesarias para el test
         actividad = Actividad.objects.exclude(autor=usuario).filter(borrador=True).first()
         # Se accede a la edición de la actividad
         self.selenium.get('%s%s' % (self.live_server_url, '/actividad/edicion/{}/'.format(actividad.id)))
-        # Se comprueba que el usuario ha sido redirigido a los detalles de la actividad
-        self.assertEqual(self.selenium.current_url, self.live_server_url + '/actividad/detalles/{}/'.format(actividad.id))
+        # Se comprueba que el usuario ha sido redirigido al listado de actviidades, puesto a que no puede redirigir a los
+        # detalles de la actividad al estar la actividad en modo borrador y no pertenecer al usuario
+        self.assertEqual(self.selenium.current_url, self.live_server_url + '/actividad/listado/'.format(actividad.id))
         # Se comprueba que se muestra el mensaje de error correctamente
         message_danger = self.selenium.find_element_by_class_name('alert-danger')
         self.assertEqual(message_danger.text, 'No se poseen los permisos necesarios para editar la actividad')
         # El usuario se desloguea
         self.logout()
-
+    
     # Un usuario edita una actividad que no está en modo borrador
     def test_editar_actividad_no_borrador(self):
         # El usuario se loguea
@@ -608,7 +545,7 @@ class ActividadTestCase(StaticLiveServerTestCase):
         # El usuario se desloguea
         self.logout()
 
-    
+
 
     # TESTS ELIMINACIÓN
 
@@ -621,11 +558,12 @@ class ActividadTestCase(StaticLiveServerTestCase):
         numero_actividades_antes = Actividad.objects.count()
         # Se accede al listado de las actividades
         self.selenium.get('%s%s' % (self.live_server_url, '/actividad/listado/'))
-        # Se obtienen las actividades listadas
-        actividades_listado_antes = self.selenium.find_elements_by_xpath('//tbody/child::tr')
         # Se pulsa el botón de eliminar actividad y se acepta
-        boton_eliminar = self.selenium.find_element_by_xpath('//button[@id="button_eliminar_{}"]'.format(actividad.id))
-        boton_eliminar.click()    
+        boton_eliminar = buscar_boton_listado(self,
+            id_listado='id_div_listado_actividades',
+            id_boton='button_eliminar_{}'.format(actividad.id),
+            page_param='page')
+        boton_eliminar.click()
         self.selenium.switch_to.alert.accept()
         # Se comprueba que el usuario vuelve al listado de actividades
         self.assertEqual(self.selenium.current_url, self.live_server_url + '/actividad/listado/')
@@ -642,12 +580,8 @@ class ActividadTestCase(StaticLiveServerTestCase):
         except ObjectDoesNotExist as e:
             pass
         self.assertEqual(actividad_eliminada, True)
-        actividades_listado_despues = self.selenium.find_elements_by_xpath('//tbody/child::tr')
-        self.assertEqual(len(actividades_listado_antes), len(actividades_listado_despues) + 1)
         # El usuario se desloguea
         self.logout()     
-
-    # Un usuario elimina una actividad, pero cancela la eliminación
 
     # Un usuario elimina una actividad, pero lo cancela en el último momento
     def test_eliminar_actividad_sin_aceptar(self):
@@ -661,7 +595,10 @@ class ActividadTestCase(StaticLiveServerTestCase):
         # Se obtienen las actividades listadas
         actividades_listado_antes = self.selenium.find_elements_by_xpath('//tbody/child::tr')
         # Se pulsa el botón de eliminar actividad pero rechaza la eliminación
-        boton_eliminar = self.selenium.find_element_by_xpath('//button[@id="button_eliminar_{}"]'.format(actividad.id))
+        boton_eliminar = buscar_boton_listado(self,
+            id_listado='id_div_listado_actividades',
+            id_boton='button_eliminar_{}'.format(actividad.id),
+            page_param='page')
         boton_eliminar.click()
         self.selenium.switch_to.alert.dismiss()
         # Se comprueba que el usuario permanece en el listado de actividades
@@ -679,9 +616,7 @@ class ActividadTestCase(StaticLiveServerTestCase):
         actividades_listado_despues = self.selenium.find_elements_by_xpath('//tbody/child::tr')
         self.assertEqual(len(actividades_listado_antes), len(actividades_listado_despues))
         # El usuario se desloguea
-        self.logout() 
-
-    # Un usuario elimina una actividad sin estar autenticado
+        self.logout()
 
     # Un usuario no autenticado elimina una actividad
     def test_eliminar_actividad_sin_autenticar(self):
@@ -700,8 +635,9 @@ class ActividadTestCase(StaticLiveServerTestCase):
         actividad = Actividad.objects.filter(borrador=True).exclude(autor=usuario).first()
         # Se accede a la eliminación de la actividad
         self.selenium.get('%s%s' % (self.live_server_url, '/actividad/eliminacion/{}/'.format(actividad.id)))
-        # Se comprueba que el usuario ha sido redirigido a los detalles de la actividad
-        self.assertEqual(self.selenium.current_url, self.live_server_url + '/actividad/detalles/{}/'.format(actividad.id))        
+        # Se comprueba que se está en la página de listado de actividades, puesto a que no puede acceder a los detalles
+        # de una actividad en modo borrador que no le pertenece
+        self.assertEqual('{}/actividad/listado/'.format(self.live_server_url, actividad.id), self.selenium.current_url)
         # Se comprueba que el mensaje de error se muestra correctamente
         message_danger = self.selenium.find_element_by_class_name('alert-danger')
         self.assertEqual(message_danger.text, 'No se poseen los permisos necesarios para editar la actividad')
@@ -749,8 +685,17 @@ class ActividadTestCase(StaticLiveServerTestCase):
         # Se obtienen las variables que se van a usar en el test
         actividad = Actividad.objects.filter(Q(vetada = False) & Q(borrador = False)).first()
         motivo_veto = 'Veto selenium test'
+        # Se accede al listado de actvidades
+        self.selenium.get('%s%s' % (self.live_server_url, '/actividad/listado/'))
         # Se acccede al formulario de vetar la actividad
-        self.selenium.get('%s%s' % (self.live_server_url, '/actividad/veto/{}/'.format(actividad.id)))
+        boton_veto = buscar_boton_listado(self,
+            id_listado='id_div_listado_actividades',
+            id_boton='button_vetar_{}'.format(actividad.id),
+            page_param='page')
+        boton_veto.click()
+        wait_driver = WebDriverWait(self.selenium, 3)
+        wait_driver.until(
+            lambda driv: driv.current_url == '{}/actividad/veto/{}/'.format(self.live_server_url, actividad.id))
         # Se comprueba que el título de la página es el correcto
         title_text = self.selenium.find_element_by_tag_name('h1').text
         self.assertEqual(title_text, 'Veto a actividades')
@@ -787,8 +732,17 @@ class ActividadTestCase(StaticLiveServerTestCase):
         # Se obtienen las variables que se van a usar en el test
         actividad = Actividad.objects.filter(Q(vetada = False) & Q(borrador = False)).first()
         motivo_veto = 'Veto selenium test'
+        # Se accede al listado de actvidades
+        self.selenium.get('%s%s' % (self.live_server_url, '/actividad/listado/'))
         # Se acccede al formulario de vetar la actividad
-        self.selenium.get('%s%s' % (self.live_server_url, '/actividad/veto/{}/'.format(actividad.id)))
+        boton_veto = buscar_boton_listado(self,
+            id_listado='id_div_listado_actividades',
+            id_boton='button_vetar_{}'.format(actividad.id),
+            page_param='page')
+        boton_veto.click()
+        wait_driver = WebDriverWait(self.selenium, 3)
+        wait_driver.until(
+            lambda driv: driv.current_url == '{}/actividad/veto/{}/'.format(self.live_server_url, actividad.id))
         # Se comprueba que el título de la página es el correcto
         title_text = self.selenium.find_element_by_tag_name('h1').text
         self.assertEqual(title_text, 'Veto a actividades')
@@ -908,8 +862,9 @@ class ActividadTestCase(StaticLiveServerTestCase):
         actividad = Actividad.objects.filter(Q(vetada = False) & Q(borrador = True)).first()
         # Se acccede al formulario de vetar la actividad
         self.selenium.get('%s%s' % (self.live_server_url, '/actividad/veto/{}/'.format(actividad.id)))
-        # Se comprueba que se está en la página de detalles de la actividad
-        self.assertEqual('{}/actividad/detalles/{}/'.format(self.live_server_url, actividad.id), self.selenium.current_url)
+        # Se comprueba que se está en la página de listado de actividades, puesto a que no puede acceder a los detalles
+        # de una actividad en modo borrador que no le pertenece
+        self.assertEqual('{}/actividad/listado/'.format(self.live_server_url, actividad.id), self.selenium.current_url)
         # Se busca el mensaje de fallo y se comprueba que es correcto
         message_danger = self.selenium.find_element_by_class_name('alert-danger')
         self.assertEqual(message_danger.text, 'No se puede vetar una actividad que está en modo borrador')
@@ -928,7 +883,10 @@ class ActividadTestCase(StaticLiveServerTestCase):
         # Se acccede a la url de listado de actividades
         self.selenium.get('%s%s' % (self.live_server_url, '/actividad/listado/'))
         # Se selecciona una actividad para levantar el veto y se acepta
-        boton_veto = self.selenium.find_element_by_xpath('//button[@id="button_levantar_veto_{}"]'.format(actividad.id))
+        boton_veto = buscar_boton_listado(self,
+            id_listado = 'id_div_listado_actividades',
+            id_boton = 'button_levantar_veto_{}'.format(actividad.id),
+            page_param = 'page')
         boton_veto.click()
         self.selenium.switch_to.alert.accept()
         # Se comprueba que se está en la página de detalles de la actividad
@@ -954,11 +912,14 @@ class ActividadTestCase(StaticLiveServerTestCase):
         # Se acccede a la url de listado de actividades
         self.selenium.get('%s%s' % (self.live_server_url, '/actividad/listado/'))
         # Se selecciona una actividad para levantar el veto y se acepta
-        boton_veto = self.selenium.find_element_by_xpath('//button[@id="button_levantar_veto_{}"]'.format(actividad.id))
+        boton_veto = buscar_boton_listado(self,
+            id_listado='id_div_listado_actividades',
+            id_boton='button_levantar_veto_{}'.format(actividad.id),
+            page_param='page')
         boton_veto.click()
         self.selenium.switch_to.alert.dismiss()
         # Se comprueba que se está en la página de listado de las actividades
-        self.assertEqual('{}/actividad/listado/'.format(self.live_server_url), self.selenium.current_url)
+        self.assertTrue(self.selenium.current_url.startswith('{}/actividad/listado/'.format(self.live_server_url)))
         # Se comprueba que la actividad no ha sufrido cambios
         actividad_recibida = Actividad.objects.get(pk=actividad.id)
         self.assertEqual(actividad_recibida.motivo_veto, actividad.motivo_veto)
@@ -1021,21 +982,9 @@ class ActividadTestCase(StaticLiveServerTestCase):
         # El usuario se desloguea
         self.logout()
 
-    # Un administrador levanta el vetos sobre una actividad que está en modo borrador
-    def test_levanta_veto_actividad_borrador(self):
-        # El usuario se loguea
-        usuario = self.login('usuario2', 'usuario2')
-        # se obtienen las variables que se van a usar en el test
-        actividad = Actividad.objects.filter(Q(vetada = True) & Q(borrador = True)).first()
-        # Se acccede a la url de levantamiento de veto
-        self.selenium.get('%s%s' % (self.live_server_url, '/actividad/levantamiento_veto/{}/'.format(actividad.id)))
-        # Se comprueba que se está en la página de detalles de la actividad
-        self.assertEqual('{}/actividad/detalles/{}/'.format(self.live_server_url, actividad.id), self.selenium.current_url)
-        # Se busca el mensaje de fallo y se comprueba que es correcto
-        message_danger = self.selenium.find_element_by_class_name('alert-danger')
-        self.assertEqual(message_danger.text, 'No se puede levantar el veto a una actividad que está en modo borrador')
-        # El usuario se desloguea
-        self.logout()
 
-    '''
+
+
+
+
 

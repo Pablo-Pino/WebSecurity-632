@@ -16,8 +16,13 @@ from WebSecurityApp.models.actividad_models import Actividad
 from WebSecurityApp.models.oferta_models import Oferta, Solicitud
 from WebSecurityApp.models.perfil_models import Usuario
 from WebSecurityApp.models.oferta_models import Oferta
+from WebSecurityApp.test_selenium.utils import evaluar_columnas_listado_oferta, evaluar_columnas_listado_actividades, \
+    evaluar_columnas_listado_usuario, buscar_boton_listado
+from WebSecurityApp.views.utils import get_ofertas_solicitables_y_ofertas_retirables
 
 import datetime
+
+
 
 class OfertaTestCase(StaticLiveServerTestCase):
     fixtures = ['dumpdata.json']
@@ -52,7 +57,7 @@ class OfertaTestCase(StaticLiveServerTestCase):
         self.selenium.get('%s%s' % (self.live_server_url, '/logout'))
 
 
-    '''
+
     # TESTS DE LISTADO
     
     # Un usuario que no es administrador accede al listado de ofertas
@@ -65,9 +70,9 @@ class OfertaTestCase(StaticLiveServerTestCase):
         usuario = Usuario.objects.get(django_user__username = 'usuario1')
         ofertas_esperadas = Oferta.objects.filter(Q(autor=usuario) | Q(borrador=False, vetada=False, cerrada=False)).distinct().order_by('id')
         ofertas_mostradas = self.selenium.find_elements_by_tag_name('tr')
-        self.assertEqual(len(ofertas_esperadas), len(ofertas_mostradas) - 1)
+        # self.assertEqual(len(ofertas_esperadas), len(ofertas_mostradas) - 1)
         # Se comprueba que el contenido de la tabla es correcto
-        self.evaluar_columnas_listado_oferta(ofertas_esperadas, usuario, False)
+        evaluar_columnas_listado_oferta(self, ofertas_esperadas, usuario, False, 'page')
         # Se cierra sesion
         self.logout()
 
@@ -81,9 +86,9 @@ class OfertaTestCase(StaticLiveServerTestCase):
         usuario = Usuario.objects.get(django_user__username = 'usuario2')
         ofertas_esperadas = Oferta.objects.filter(Q(autor=usuario) | Q(borrador=False, cerrada=False)).distinct().order_by('id')
         ofertas_mostradas = self.selenium.find_elements_by_tag_name('tr')
-        self.assertEqual(len(ofertas_esperadas), len(ofertas_mostradas) - 1)
+        # self.assertEqual(len(ofertas_esperadas), len(ofertas_mostradas) - 1)
         # Se comprueba que el contenido de la tabla es correcto
-        self.evaluar_columnas_listado_oferta(ofertas_esperadas, usuario, False)
+        evaluar_columnas_listado_oferta(self, ofertas_esperadas, usuario, False, 'page')
         # Se cierra sesion
         self.logout()
 
@@ -97,12 +102,11 @@ class OfertaTestCase(StaticLiveServerTestCase):
          usuario = Usuario.objects.get(django_user__username='usuario1')
          ofertas_esperadas = Oferta.objects.filter(autor=usuario).distinct().order_by('id')
          ofertas_mostradas = self.selenium.find_elements_by_tag_name('tr')
-         self.assertEqual(len(ofertas_esperadas), len(ofertas_mostradas) - 1)
+         # self.assertEqual(len(ofertas_esperadas), len(ofertas_mostradas) - 1)
          # Se comprueba que el contenido de la tabla es correcto
-         self.evaluar_columnas_listado_oferta(ofertas_esperadas, usuario, True)
+         evaluar_columnas_listado_oferta(self, ofertas_esperadas, usuario, True, 'page')
          # Se cierra sesion
          self.logout()
-    '''
 
     # Un usuario que accede al listado de ofertas que ha solicitado
     def test_listado_solicitudes_propias(self):
@@ -116,163 +120,14 @@ class OfertaTestCase(StaticLiveServerTestCase):
         for solicitud in list(Solicitud.objects.filter(usuario=usuario).order_by('id')):
             ofertas_esperadas.append(solicitud.oferta)
         ofertas_mostradas = self.selenium.find_elements_by_tag_name('tr')
-        self.assertEqual(len(ofertas_esperadas), len(ofertas_mostradas) - 1)
+        # self.assertEqual(len(ofertas_esperadas), len(ofertas_mostradas) - 1)
         # Se comprueba que el contenido de la tabla es correcto
-        self.evaluar_columnas_listado_oferta(ofertas_esperadas, usuario, True)
+        evaluar_columnas_listado_oferta(self, ofertas_esperadas, usuario, True, 'page')
         # Se cierra sesion
         self.logout()
 
-    def evaluar_columnas_listado_oferta(self, oferta_esperadas, usuario, listado_propio):
-        i = 2
-        ofertas = []
-        if listado_propio:
-            ofertas = Oferta.objects.filter(autor=usuario).distinct().order_by('id')
-        else:
-            if usuario.es_admin:
-                ofertas = list(Oferta.objects.exclude((Q(cerrada=True) | Q(borrador=True)) & ~Q(autor=usuario)))
-            else:
-                ofertas = list(Oferta.objects.exclude((Q(cerrada=True) | Q(borrador=True) | Q(vetada=True)) & ~Q(autor=usuario)))
-        ofertas_solicitables = []
-        ofertas_retirables = []
-        ofertas_solicitadas = []
-        solicitudes_usuario = list(Solicitud.objects.filter(usuario=usuario).only('oferta').distinct())
-        for solicitud in solicitudes_usuario:
-            ofertas_solicitadas.append(solicitud.oferta)
-        for oferta in ofertas:
-            if not oferta.cerrada and not oferta.vetada and oferta in ofertas_solicitadas:
-                ofertas_retirables.append(oferta)
-            elif not oferta.borrador and not oferta.cerrada and not oferta.vetada and not oferta in ofertas_solicitadas:
-                es_solicitable = True
-                for actividad_requerida in oferta.actividades.all():
-                    if not actividad_requerida in usuario.actividades_realizadas.all():
-                        es_solicitable = False
-                        break
-                if es_solicitable:
-                    ofertas_solicitables.append(oferta)
-        # Por cada una de las oferta que debe aparecer
-        for oferta in oferta_esperadas:
-            # Se comprueba el backgorund-color de las filas
-            fila = self.selenium.find_element_by_xpath('//tr[{}]'.format(i))
-            # Si la oferta está cerrada o vetaada el background color el rojizo
-            if oferta.vetada or oferta.cerrada:
-                self.assertEqual(fila.value_of_css_property('background-color'), 'rgba(255, 0, 0, 0.4)')
-            # Si el usuario puede solicitar la oferta, entonces el background es verdoso
-            elif oferta in ofertas_solicitables and not listado_propio:
-                self.assertEqual(fila.value_of_css_property('background-color'), 'rgba(0, 255, 0, 0.4)')
-            # Se comprueba el título
-            titulo = self.selenium.find_element_by_xpath('//tbody/child::tr[{}]/child::td[1]'.format(i)).text
-            self.assertEqual(titulo, oferta.titulo)
-            # Se comprueba las descripción
-            descripcion = self.selenium.find_element_by_xpath('//tbody/child::tr[{}]/child::td[2]'.format(i)).text
-            self.assertEqual(descripcion, oferta.descripcion)
-            # Se comprueba la fecha de creación
-            fecha_creacion = self.selenium.find_element_by_xpath('//tbody/child::tr[{}]/child::td[3]'.format(i)).text
-            self.assertEqual(fecha_creacion, oferta.fecha_creacion.strftime('%d/%m/%Y'))
-            # Se comprueba el autor
-            autor = self.selenium.find_element_by_xpath('//tbody/child::tr[{}]/child::td[4]'.format(i)).text
-            self.assertEqual(autor, '{} {}'.format(oferta.autor.django_user.first_name, oferta.autor.django_user.last_name))
-            # Se comprueba que está el botón de detalles
-            boton_detalles = self.selenium.find_element_by_xpath('//tbody/child::tr[{}]/child::td[5]/child::button'.format(i))
-            self.assertEqual(boton_detalles.get_attribute('onclick'), 'window.location.href = \'/oferta/detalles/{}/\''.format(oferta.id))
-            j = 6
-            # Se comprueba que esté el botón de editar si procede
-            try:
-                boton_editar = self.selenium.find_element_by_xpath('//tbody/child::tr[{}]/child::td[{}]/child::button'.format(i, j))
-                if usuario == oferta.autor and oferta.borrador:
-                    self.assertEqual(boton_editar.get_attribute('onclick'), 'window.location.href = \'/oferta/edicion/{}/\''.format(oferta.id))
-                    boton_editar = True
-                    j = j + 1
-                else:
-                    self.assertEqual(boton_editar.get_attribute('onclick') == 'window.location.href = \'/oferta/edicion/{}/\''.format(oferta.id), False)
-                    boton_editar = False
-            except NoSuchElementException:
-                boton_editar = False
-            self.assertEqual(usuario == oferta.autor and oferta.borrador, boton_editar)
-            # Se comprueba que está el botón de eliminar si procede
-            try:
-                boton_eliminar = self.selenium.find_element_by_xpath('//tbody/child::tr[{}]/child::td[{}]/child::button'.format(i, j))
-                if usuario == oferta.autor and oferta.borrador:
-                    self.assertEqual(boton_eliminar.get_attribute('onclick'), 'alerta_redireccion(\'Desea eliminar esta oferta ?\', \'/oferta/eliminacion/{}/\')'.format(oferta.id))
-                    boton_eliminar = True
-                    j = j + 1
-                else:
-                    self.assertEqual(boton_eliminar.get_attribute('onclick') == 'alerta_redireccion(\'Desea eliminar esta oferta ?\', \'/oferta/eliminacion/{}/\')'.format(oferta.id), False)
-                    boton_eliminar = False
-            except NoSuchElementException:
-                boton_eliminar = False
-            self.assertEqual(usuario == oferta.autor and oferta.borrador, boton_eliminar)
-            # Se comprueba que está el botón de cerrar si procede
-            try:
-                boton_cierre = self.selenium.find_element_by_xpath(
-                    '//tbody/child::tr[{}]/child::td[{}]/child::button'.format(i, j))
-                if usuario==oferta.autor and not oferta.borrador and not oferta.vetada and not oferta.cerrada:
-                    self.assertEqual(boton_cierre.get_attribute('onclick'), 'alerta_redireccion(\'Desea cerrar esta oferta ?\', \'/oferta/cierre/{}/\')'.format(oferta.id))
-                    boton_cierre = True
-                    j = j + 1
-                else:
-                    self.assertNotEqual(boton_cierre.get_attribute('onclick'), 'alerta_redireccion(\'Desea cerrar esta oferta ?\', \'/oferta/cierre/{}/\')'.format(oferta.id))
-                    boton_cierre = False
-            except NoSuchElementException:
-                boton_cierre = False
-            self.assertEqual(usuario == oferta.autor and not oferta.borrador and not oferta.vetada and not oferta.cerrada, boton_cierre)
-            # Se comprueba que está el botón de vetar si procede
-            try:
-                boton_veto = self.selenium.find_element_by_xpath('//tbody/child::tr[{}]/child::td[{}]/child::button'.format(i, j))
-                if usuario.es_admin and not oferta.borrador and not oferta.vetada:
-                    self.assertEqual(boton_veto.get_attribute('onclick'), 'window.location.href = \'/oferta/veto/{}/\''.format(oferta.id))
-                    boton_veto = True
-                    j = j + 1
-                else:
-                    self.assertEqual(boton_veto.get_attribute('onclick') == 'window.location.href = \'/oferta/veto/{}/\''.format(oferta.id), False)
-                    boton_veto = False
-            except NoSuchElementException:
-                boton_veto = False
-            self.assertEqual(usuario.es_admin and not oferta.borrador and not oferta.vetada and not oferta.cerrada, boton_veto)
-            # Se comprueba que está el botón de levantar veto si procede
-            try:
-                boton_levanta_veto = self.selenium.find_element_by_xpath('//tbody/child::tr[{}]/child::td[{}]/child::button'.format(i, j))
-                if usuario.es_admin and not oferta.borrador and oferta.vetada:
-                    self.assertEqual(boton_levanta_veto.get_attribute('id'), 'button_levantar_veto_{}'.format(oferta.id))
-                    boton_levanta_veto = True
-                    j = j + 1
-                else:
-                    self.assertEqual(boton_levanta_veto.get_attribute('id') == 'button_levantar_veto_{}'.format(oferta.id), False)
-                    boton_levanta_veto = False
-            except NoSuchElementException:
-                boton_levanta_veto = False
-            self.assertEqual(usuario.es_admin and not oferta.borrador and oferta.vetada, boton_levanta_veto)
-            # Si no es el listado de ofertas propias, pueden aparecer los botones relacionados con las solicitudes
-            if not listado_propio:
-                # Se comprueba que está el botón de solicitar la oferta, si procede
-                existe_boton_solicitud = True
-                try:
-                    boton_solicitud = self.selenium.find_element_by_xpath('//tbody/child::tr[{}]/child::td[{}]/child::button'.format(i, j))
-                    if oferta in ofertas_solicitables:
-                        self.assertEqual(boton_solicitud.get_attribute('id'), 'button_solicitar_oferta_{}'.format(oferta.id))
-                        j = j + 1
-                    else:
-                        self.assertEqual(boton_solicitud.get_attribute('id') == 'button_solicitar_oferta_{}'.format(oferta.id), False)
-                        existe_boton_solicitud = False
-                except NoSuchElementException:
-                    existe_boton_solicitud = False
-                self.assertEqual(oferta in ofertas_solicitables, existe_boton_solicitud)
-                # Se comprueba que está el botón de retirar la oferta, si procede
-                existe_boton_retiro_solicitud = True
-                try:
-                    boton_retiro_solicitud = self.selenium.find_element_by_xpath('//tbody/child::tr[{}]/child::td[{}]/child::button'.format(i, j))
-                    if oferta in ofertas_retirables:
-                        self.assertEqual(boton_retiro_solicitud.get_attribute('id'), 'button_retirar_solicitud_oferta_{}'.format(oferta.id))
-                        j = j + 1
-                    else:
-                        self.assertEqual(boton_retiro_solicitud.get_attribute('id') == 'button_retirar_solicitud_oferta_{}'.format(oferta.id), False)
-                        existe_boton_retiro_solicitud = False
-                except NoSuchElementException:
-                    existe_boton_retiro_solicitud = False
-                self.assertEqual(oferta in ofertas_retirables, existe_boton_retiro_solicitud)
-            i = i + 1
 
 
-    '''
     # TEST DE DETALLES
 
     # Un usuario accede a los detalles de una oferta no baneada y no es administrador
@@ -314,7 +169,7 @@ class OfertaTestCase(StaticLiveServerTestCase):
         self.detalles_oferta(oferta, usuario)
         # El usuario se desloguea
         self.logout()
-    
+
     # Un usuario accede a los detalles de una oferta cerrada
     def test_detalles_oferta_cerrada(self):
         # El usuario se loguea y se inicializan las variables más relevantes
@@ -446,24 +301,13 @@ class OfertaTestCase(StaticLiveServerTestCase):
         # Comprueba el legend del fieldset
         legend_actividades = fieldset_actividades.find_element_by_tag_name('legend')
         self.assertEqual(legend_actividades.text, 'Actividades')
-        # Comprueba los fieldsets contenidos dentro del fieldset
-        list_actividades_fieldsets = fieldset_actividades.find_elements_by_tag_name('fieldset')
-        self.assertEqual(len(list_actividades_fieldsets), len(oferta.actividades.all()))
-        # En cada fieldset
-        for fieldset in list_actividades_fieldsets:
-            ps_fieldset = fieldset.find_elements_by_tag_name('p')
-            # Se comprueba el identificador de la actividad y que la actividad que aparece es un requisito de la oferta
-            p_identificador = ps_fieldset[0]
-            actividad = Actividad.objects.get(identificador=p_identificador.text)
-            self.assertTrue(actividad in oferta.actividades.all())
-            # Se comprueba el titulo de la actividad
-            p_titulo = ps_fieldset[1]
-            self.assertEqual(p_titulo.text, actividad.titulo)
-            # Se comprueba el enlace a los detalles de la actividad
-            p_enlace = ps_fieldset[2]
-            enlace = p_enlace.find_element_by_tag_name('a')
-            self.assertEqual(enlace.get_attribute('href'), '{}/actividad/detalles/{}/'.format(self.live_server_url, actividad.id))
-            self.assertEqual(enlace.text, 'Detalles de la actividad')
+        # Comprueba el listado de actividades
+        evaluar_columnas_listado_actividades(test_case = self,
+            actividades_esperadas = oferta.actividades.all(),
+            usuario = usuario,
+            resalta_resueltas = False,
+            page_param = 'page_actividades',
+            parent_element = 'fieldset_actividades')
         # Si el usuario es el autor de la oferta, debe apareecer otro fieldset con los solicitantes
         # Busca el fieldset
         try:
@@ -471,33 +315,20 @@ class OfertaTestCase(StaticLiveServerTestCase):
         except NoSuchElementException as e:
             fieldset_solicitantes = None
         if usuario == oferta.autor and not oferta.borrador:
+            solicitantes_esperados = []
+            for solicitud in Solicitud.objects.filter(oferta = oferta):
+                solicitantes_esperados.append(solicitud.usuario)
             self.assertIsNotNone(fieldset_solicitantes)
             # Comprueba el legend del fieldset
             legend_solicitantes = fieldset_solicitantes.find_element_by_tag_name('legend')
             self.assertEqual(legend_solicitantes.text, 'Solicitantes')
-            # Comprueba los fieldsets contenidos dentro del fieldset
-            list_solicitantes_fieldsets = fieldset_solicitantes.find_elements_by_tag_name('fieldset')
-            numero_solicitantes = len(list(Solicitud.objects.filter(oferta=oferta)))
-            self.assertEqual(len(list_solicitantes_fieldsets), numero_solicitantes)
-            # En cada fieldset
-            for fieldset in list_solicitantes_fieldsets:
-                ps_fieldset = fieldset.find_elements_by_tag_name('p')
-                # Se obtiene el nombre y apellidos del usuario
-                p_nombre_apellidos = ps_fieldset[0]
-                # Se obtiene el email del usuario
-                p_email = ps_fieldset[1]
-                # Se obtiene el enlace al perfil del usuario
-                p_enlace = ps_fieldset[2]
-                enlace = p_enlace.find_element_by_tag_name('a')
-                # Se obtiene el usuario a través del email, que actúa como clave única
-                solicitante = Usuario.objects.get(django_user__email=p_email.text)
-                # Se comprueba el nombre y apellidos
-                self.assertEqual(p_nombre_apellidos.text, '{} {}'.format(solicitante.django_user.first_name,
-                    solicitante.django_user.last_name))
-                # Se comprueba el enlace
-                self.assertEqual(enlace.get_attribute('href'),
-                    '{}/perfil/detalles/{}/'.format(self.live_server_url, solicitante.id))
-                self.assertEqual(enlace.text, 'Perfil del solicitante')
+            # Comprueba el listado de solicitantes
+            evaluar_columnas_listado_usuario(test_case=self,
+                usuarios_esperados = solicitantes_esperados,
+                usuario = usuario,
+                resalta_resueltas = False,
+                page_param = 'page_solicitantes',
+                parent_element = 'fieldset_solicitantes')
         else:
             self.assertIsNone(fieldset_solicitantes)
         # Mira si hay un boton de editar
@@ -791,7 +622,15 @@ class OfertaTestCase(StaticLiveServerTestCase):
         usuario = Usuario.objects.get(django_user__username='usuario1')
         oferta = Oferta.objects.filter(Q(autor=usuario) & Q(borrador=True) & Q(vetada=False)).first()
         # Se accede a la edición de la oferta
-        self.selenium.get('%s%s' % (self.live_server_url, '/oferta/edicion/{}/'.format(oferta.id)))
+        self.selenium.get('%s%s' % (self.live_server_url, '/oferta/listado'))
+        boton_editar = buscar_boton_listado(self,
+            id_listado='id_div_listado_ofertas',
+            id_boton='button_editar_{}'.format(oferta.id),
+            page_param='page')
+        boton_editar.click()
+        wait_driver = WebDriverWait(self.selenium, 3)
+        wait_driver.until(
+            lambda driv: driv.current_url == '{}/oferta/edicion/{}/'.format(self.live_server_url, oferta.id))
         # Se comprueba que el título de la página es correcto
         title_text = self.selenium.find_element_by_tag_name('h1').text
         self.assertEqual('Edicion de ofertas' in title_text, True)
@@ -833,7 +672,15 @@ class OfertaTestCase(StaticLiveServerTestCase):
         usuario = Usuario.objects.get(django_user__username='usuario1')
         oferta = Oferta.objects.filter(Q(autor=usuario) & Q(borrador=True) & Q(vetada=False)).first()
         # El usuario accede a la edición de la ofertas
-        self.selenium.get('%s%s' % (self.live_server_url, '/oferta/edicion/{}/'.format(oferta.id)))
+        self.selenium.get('%s%s' % (self.live_server_url, '/oferta/listado'))
+        boton_editar = buscar_boton_listado(self,
+            id_listado='id_div_listado_ofertas',
+            id_boton='button_editar_{}'.format(oferta.id),
+            page_param='page')
+        boton_editar.click()
+        wait_driver = WebDriverWait(self.selenium, 3)
+        wait_driver.until(
+            lambda driv: driv.current_url == '{}/oferta/edicion/{}/'.format(self.live_server_url, oferta.id))
         # Se comprueba que el texto es correcto
         title_text = self.selenium.find_element_by_tag_name('h1').text
         self.assertEqual('Edicion de oferta' in title_text, True)
@@ -1138,7 +985,11 @@ class OfertaTestCase(StaticLiveServerTestCase):
         # Se obtienen las ofertas listadas
         ofertas_listado_antes = self.selenium.find_elements_by_xpath('//tbody/child::tr')
         # Se pulsa el botón de eliminar oferta y se acepta
-        boton_eliminar = self.selenium.find_element_by_xpath('//button[@id="button_eliminar_{}"]'.format(oferta.id))
+        self.selenium.get('%s%s' % (self.live_server_url, '/oferta/listado'))
+        boton_eliminar = buscar_boton_listado(self,
+            id_listado='id_div_listado_ofertas',
+            id_boton='button_eliminar_{}'.format(oferta.id),
+            page_param='page')
         boton_eliminar.click()
         self.selenium.switch_to.alert.accept()
         # Se comprueba que el usuario vuelve al listado de ofertas
@@ -1157,13 +1008,10 @@ class OfertaTestCase(StaticLiveServerTestCase):
             pass
         self.assertEqual(oferta_eliminada, True)
         ofertas_listado_despues = self.selenium.find_elements_by_xpath('//tbody/child::tr')
-        self.assertEqual(len(ofertas_listado_antes), len(ofertas_listado_despues) + 1)
         # El usuario se desloguea
         self.logout()
 
-        # Un usuario elimina una oferta, pero cancela la eliminación
-
-    # Un usuario va a eliminar uan oferta, pero lo cancela
+    # Un usuario va a eliminar una oferta, pero lo cancela en el ultimo momento
     def test_eliminar_oferta_sin_aceptar(self):
         # El usuario se loguea
         usuario = self.login('usuario1', 'usuario1')
@@ -1175,7 +1023,11 @@ class OfertaTestCase(StaticLiveServerTestCase):
         # Se obtienen las ofertas listadas
         ofertas_listado_antes = self.selenium.find_elements_by_xpath('//tbody/child::tr')
         # Se pulsa el botón de eliminar oferta pero rechaza la eliminación
-        boton_eliminar = self.selenium.find_element_by_xpath('//button[@id="button_eliminar_{}"]'.format(oferta.id))
+        self.selenium.get('%s%s' % (self.live_server_url, '/oferta/listado'))
+        boton_eliminar = buscar_boton_listado(self,
+            id_listado='id_div_listado_ofertas',
+            id_boton='button_eliminar_{}'.format(oferta.id),
+            page_param='page')
         boton_eliminar.click()
         self.selenium.switch_to.alert.dismiss()
         # Se comprueba que el usuario permanece en el listado de ofertas
@@ -1191,7 +1043,6 @@ class OfertaTestCase(StaticLiveServerTestCase):
             pass
         self.assertEqual(oferta_eliminada, False)
         ofertas_listado_despues = self.selenium.find_elements_by_xpath('//tbody/child::tr')
-        self.assertEqual(len(ofertas_listado_antes), len(ofertas_listado_despues))
         # El usuario se desloguea
         self.logout()
 
@@ -1265,7 +1116,15 @@ class OfertaTestCase(StaticLiveServerTestCase):
         oferta = Oferta.objects.filter(vetada=False, borrador=False, cerrada=False).first()
         motivo_veto = 'Veto selenium test'
         # Se acccede al formulario de vetar la oferta
-        self.selenium.get('%s%s' % (self.live_server_url, '/oferta/veto/{}/'.format(oferta.id)))
+        self.selenium.get('%s%s' % (self.live_server_url, '/oferta/listado'))
+        boton_veto = buscar_boton_listado(self,
+            id_listado='id_div_listado_ofertas',
+            id_boton='button_vetar_{}'.format(oferta.id),
+            page_param='page')
+        boton_veto.click()
+        wait_driver = WebDriverWait(self.selenium, 3)
+        wait_driver.until(
+            lambda driv: driv.current_url == '{}/oferta/veto/{}/'.format(self.live_server_url, oferta.id))
         # Se comprueba que el título de la página es el correcto
         title_text = self.selenium.find_element_by_tag_name('h1').text
         self.assertEqual(title_text, 'Veto a ofertas')
@@ -1306,7 +1165,15 @@ class OfertaTestCase(StaticLiveServerTestCase):
         oferta = Oferta.objects.filter(vetada=False, cerrada=False, borrador=False).first()
         motivo_veto = 'Veto selenium test'
         # Se acccede al formulario de vetar la oferta
-        self.selenium.get('%s%s' % (self.live_server_url, '/oferta/veto/{}/'.format(oferta.id)))
+        self.selenium.get('%s%s' % (self.live_server_url, '/oferta/listado'))
+        boton_veto = buscar_boton_listado(self,
+            id_listado='id_div_listado_ofertas',
+            id_boton='button_vetar_{}'.format(oferta.id),
+            page_param='page')
+        boton_veto.click()
+        wait_driver = WebDriverWait(self.selenium, 3)
+        wait_driver.until(
+            lambda driv: driv.current_url == '{}/oferta/veto/{}/'.format(self.live_server_url, oferta.id))
         # Se comprueba que el título de la página es el correcto
         title_text = self.selenium.find_element_by_tag_name('h1').text
         self.assertEqual(title_text, 'Veto a ofertas')
@@ -1429,9 +1296,9 @@ class OfertaTestCase(StaticLiveServerTestCase):
         oferta = Oferta.objects.filter(vetada=False, borrador=True).first()
         # Se acccede al formulario de vetar la oferta
         self.selenium.get('%s%s' % (self.live_server_url, '/oferta/veto/{}/'.format(oferta.id)))
-        # Se comprueba que se está en la página de detalles de la oferta
-        self.assertEqual('{}/oferta/detalles/{}/'.format(self.live_server_url, oferta.id),
-                         self.selenium.current_url)
+        # Se comprueba que se está en la página de listado de las ofertas, puesto a que el usuario no puede acceder a
+        # los detalles de una oferta que está en borrador y no le pertenece
+        self.assertEqual('{}/oferta/listado/'.format(self.live_server_url, oferta.id), self.selenium.current_url)
         # Se busca el mensaje de fallo y se comprueba que es correcto
         message_danger = self.selenium.find_element_by_class_name('alert-danger')
         self.assertEqual(message_danger.text, 'No se puede vetar una oferta que está en modo borrador')
@@ -1467,7 +1334,10 @@ class OfertaTestCase(StaticLiveServerTestCase):
         # Se acccede a la url de listado de ofertas
         self.selenium.get('%s%s' % (self.live_server_url, '/oferta/listado/'))
         # Se selecciona una oferta para levantar el veto y se acepta
-        boton_veto = self.selenium.find_element_by_xpath('//button[@id="button_levantar_veto_{}"]'.format(oferta.id))
+        boton_veto = buscar_boton_listado(self,
+            id_listado = 'id_div_listado_ofertas',
+            id_boton = 'button_levantar_veto_{}'.format(oferta.id),
+            page_param = 'page')
         boton_veto.click()
         self.selenium.switch_to.alert.accept()
         # Se comprueba que se está en la página de detalles de la oferta
@@ -1495,11 +1365,14 @@ class OfertaTestCase(StaticLiveServerTestCase):
         # Se acccede a la url de listado de ofertas
         self.selenium.get('%s%s' % (self.live_server_url, '/oferta/listado/'))
         # Se selecciona una oferta para levantar el veto y se acepta
-        boton_veto = self.selenium.find_element_by_xpath('//button[@id="button_levantar_veto_{}"]'.format(oferta.id))
+        boton_veto = buscar_boton_listado(self,
+            id_listado='id_div_listado_ofertas',
+            id_boton='button_levantar_veto_{}'.format(oferta.id),
+            page_param='page')
         boton_veto.click()
         self.selenium.switch_to.alert.dismiss()
         # Se comprueba que se está en la página de listado de las ofertas
-        self.assertEqual('{}/oferta/listado/'.format(self.live_server_url), self.selenium.current_url)
+        self.assertTrue(self.selenium.current_url.startswith('{}/oferta/listado/'.format(self.live_server_url)))
         # Se comprueba que la oferta no ha sufrido cambios
         oferta_recibida = Oferta.objects.get(pk=oferta.id)
         self.assertEqual(oferta_recibida.motivo_veto, oferta.motivo_veto)
@@ -1577,7 +1450,10 @@ class OfertaTestCase(StaticLiveServerTestCase):
         # Se acccede a la url de listado de ofertas
         self.selenium.get('%s%s' % (self.live_server_url, '/oferta/listado/'))
         # Se selecciona una oferta para levantar el veto y se acepta
-        boton_cierre = self.selenium.find_element_by_xpath('//button[@id="button_cerrar_{}"]'.format(oferta.id))
+        boton_cierre = buscar_boton_listado(self,
+            id_listado = 'id_div_listado_ofertas',
+            id_boton = 'button_cerrar_{}'.format(oferta.id),
+            page_param = 'page')
         boton_cierre.click()
         self.selenium.switch_to.alert.accept()
         # Se comprueba que se está en la página de detalles de la oferta
@@ -1604,7 +1480,10 @@ class OfertaTestCase(StaticLiveServerTestCase):
         # Se acccede a la url de listado de ofertas
         self.selenium.get('%s%s' % (self.live_server_url, '/oferta/listado/'))
         # Se selecciona una oferta para levantar el veto y se acepta
-        boton_cierre = self.selenium.find_element_by_xpath('//button[@id="button_cerrar_{}"]'.format(oferta.id))
+        boton_cierre = buscar_boton_listado(self,
+            id_listado='id_div_listado_ofertas',
+            id_boton='button_cerrar_{}'.format(oferta.id),
+            page_param='page')
         boton_cierre.click()
         self.selenium.switch_to.alert.dismiss()
         # Se comprueba que se está en la página de listado de las ofertas
@@ -1675,34 +1554,19 @@ class OfertaTestCase(StaticLiveServerTestCase):
 
     def test_solicita_oferta(self):
         # El usuario se loguea y se obtienen las variables que se van a usar en el test
-        usuario = self.login('usuario2', 'usuario2')
+        usuario = self.login('usuario1', 'usuario1')
         # Se busca una oferta que se pueda solicitar
-        ofertas_solicitadas = []
-        for solicitud in list(Solicitud.objects.filter(usuario=usuario).only('oferta')):
-            ofertas_solicitadas.append(solicitud.oferta)
-        ofertas_posibles = []
-        for oferta_for in list(Oferta.objects.filter(borrador=False, vetada=False, cerrada=False)):
-            ofertas_posibles.append(oferta_for)
-        actividades_realizadas = Usuario.objects.get(pk=usuario.id).actividades_realizadas.all()
-        # Se comprueba que no se ha solicitado antes la oferta y que se han realizado las actividades necesarias
-        oferta = None
-        for oferta_posible in ofertas_posibles:
-            puede_solicitar = True
-            # Si no se ha solicitado al oferta antes
-            if not oferta_posible in ofertas_solicitadas:
-                # Comprueba que se han realizado las tareas anteriores
-                actividades_requisitos = oferta_posible.actividades.all()
-                for actividad_requisito in actividades_requisitos:
-                    if not actividad_requisito in actividades_realizadas:
-                        puede_solicitar = False
-                        break
-                if puede_solicitar:
-                    oferta = oferta_posible
-                    break
+        ofertas = Oferta.objects.exclude((Q(cerrada=True) | Q(borrador=True) | Q(vetada=True)) & ~Q(autor=usuario)).order_by('id')
+        ofertas_solicitables = get_ofertas_solicitables_y_ofertas_retirables(
+            usuario=usuario, ofertas=ofertas)[0]
+        oferta = ofertas_solicitables[0]
         # Se acccede a la url de listado de ofertas
         self.selenium.get('%s%s' % (self.live_server_url, '/oferta/listado/'))
-        # Se selecciona una oferta para solicitarl
-        boton_solicitud = self.selenium.find_element_by_xpath('//button[@id="button_solicitar_oferta_{}"]'.format(oferta.id))
+        # Se selecciona una oferta para solicitar
+        boton_solicitud = buscar_boton_listado(self,
+            id_listado = 'id_div_listado_ofertas',
+            id_boton = 'button_solicitar_oferta_{}'.format(oferta.id),
+            page_param = 'page')
         boton_solicitud.click()
         # Se comprueba que se está en la página de detalles de la oferta
         # Pero antes se tiene que esperar a que redirija a la página
@@ -1800,7 +1664,6 @@ class OfertaTestCase(StaticLiveServerTestCase):
         # Se comprueba que se está en la página de listado de las ofertas
         # Pero antes se tiene que esperar a que redirija a la página
         wait_driver = WebDriverWait(self.selenium, 3)
-        print(oferta.id)
         wait_driver.until(
             lambda driv: driv.current_url == '{}/oferta/listado/'.format(self.live_server_url, oferta.id))
         self.assertEqual('{}/oferta/listado/'.format(self.live_server_url), self.selenium.current_url)
@@ -1992,7 +1855,7 @@ class OfertaTestCase(StaticLiveServerTestCase):
         self.logout()
 
 
-
+    
     # TESTS RETIRO SOLICITUD
 
     def test_retira_solicitud(self):
@@ -2003,7 +1866,10 @@ class OfertaTestCase(StaticLiveServerTestCase):
         # Se acccede a la url de listado de ofertas
         self.selenium.get('%s%s' % (self.live_server_url, '/oferta/listado/'))
         # Se selecciona una oferta para retirar la solicitud
-        boton_retira_solicitud = self.selenium.find_element_by_xpath('//button[@id="button_retirar_solicitud_oferta_{}"]'.format(oferta.id))
+        boton_retira_solicitud = buscar_boton_listado(self,
+            id_listado = 'id_div_listado_ofertas',
+            id_boton = 'button_retirar_solicitud_oferta_{}'.format(oferta.id),
+            page_param = 'page')
         boton_retira_solicitud.click()
         # Se comprueba que se está en la página de detalles de la oferta
         # Pero antes se tiene que esperar a que redirija a la página
@@ -2025,7 +1891,7 @@ class OfertaTestCase(StaticLiveServerTestCase):
     def test_retira_solicitud_sin_solicitar(self):
         # El usuario se loguea y se obtienen las variables que se van a usar en el test
         usuario = self.login('usuario1', 'usuario1')
-        # Se busca una oferta que se pueda retirar, pero que no haya sido solicitaada por el usuario
+        # Se busca una oferta que se pueda retirar, pero que no haya sido solicitada por el usuario
         oferta = None
         solicitudes = list(Solicitud.objects.filter(oferta__vetada=False, oferta__borrador=False, oferta__cerrada=False))
         for oferta_for in Oferta.objects.filter(vetada=False, borrador=False, cerrada=False):
@@ -2135,7 +2001,7 @@ class OfertaTestCase(StaticLiveServerTestCase):
         # El usuario se desloguea
         self.logout()
 
-    '''
+
 
     # METODOS AUXILIARES
 

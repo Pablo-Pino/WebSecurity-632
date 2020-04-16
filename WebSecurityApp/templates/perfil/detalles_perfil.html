@@ -17,20 +17,22 @@
                 {% for anexo in anexos %}
                     <li>
                         <a href="{{ anexo.anexo }}">{{ anexo.anexo }}</a>
-                        {% if usuario==usuario_perfil %}
+                        {% if usuario == usuario_perfil %}
                             <br>
-                            <button onclick="window.location.href = '/anexo/creacion_edicion/{{ anexo.id }}/'">Editar anexo</button>
-                            <button onclick="window.location.href = '/anexo/eliminacion/{{ anexo.id }}/'">Eliminar anexo</button>
+                            <button id="id_boton_edicion_anexo_{{anexo.id}}" onclick="window.location.href = '/anexo/creacion_edicion/{{ anexo.id }}/'">Editar anexo</button>
+                            <button id="id_boton_eliminacion_anexo_{{anexo.id}}" onclick="window.location.href = '/anexo/eliminacion/{{ anexo.id }}/'">Eliminar anexo</button>
                         {% endif %}
                     </li>
                     <br>
                 {% endfor %}
             </ul>
-            <button onclick="window.location.href = '/anexo/creacion_edicion/'">Crear nuevo anexo</button>
+            {% if usuario == usuario_perfil %}
+                <button id="id_boton_creacion_anexo" onclick="window.location.href = '/anexo/creacion_edicion/'">Crear nuevo anexo</button>
+            {% endif %}
         </fieldset>
 
         <fieldset id='id_fieldset_actividades'><legend>Listado de actividades resueltas por {{ usuario_perfil.django_user.username}}</legend>
-            {% include 'blocks/lista_listado_actividades.html' with actividades=actividades_realizadas_detalles usuario=usuario page_param='page' %}
+            {% include 'blocks/lista_listado_actividades.html' with page_obj_actividades=page_obj_actividades_realizadas usuario=usuario page_param='page' %}
         </fieldset>
 
     </div>

@@ -4,7 +4,7 @@
 
 {% block body %}
         
-    <div>
+    <div id="id_div_listado_ofertas">
 
     {% include 'blocks/pagination.html' with page_obj=page_obj_ofertas page_param='page' %}
 
@@ -28,12 +28,12 @@
                     <td>{{ oferta.fecha_creacion | date:"SHORT_DATE_FORMAT" }}</td>
                     <td>{{ oferta.autor.django_user.first_name }} {{ oferta.autor.django_user.last_name }}</td>
                     <td>
-                        <button onclick="window.location.href = '/oferta/detalles/{{ oferta.id }}/'">Detalles de la oferta</button>
+                        <button id="button_detalles_{{ oferta.id }}" onclick="window.location.href = '/oferta/detalles/{{ oferta.id }}/'">Detalles de la oferta</button>
                     </td>
                     {% if not oferta.cerrada %}
                         {% if oferta.borrador and oferta.autor == usuario %}
                             <td>
-                                <button onclick="window.location.href = '/oferta/edicion/{{ oferta.id }}/'">Editar oferta</button>
+                                <button id="button_editar_{{ oferta.id }}" onclick="window.location.href = '/oferta/edicion/{{ oferta.id }}/'">Editar oferta</button>
                             </td>
                             <td>
                                 <button id="button_eliminar_{{ oferta.id }}" onclick="alerta_redireccion('Desea eliminar esta oferta ?', '/oferta/eliminacion/{{ oferta.id }}/')">Eliminar oferta</button>

@@ -17,6 +17,8 @@ from WebSecurityApp.services.oferta_services import crea_oferta, edita_oferta, e
     levanta_veto_oferta, oferta_formulario, lista_ofertas, cierra_oferta, solicita_oferta, retira_solicitud_oferta, \
     lista_ofertas_propias, lista_solicitudes_propias
 from WebSecurityApp.views.utils import get_ofertas_solicitables_y_ofertas_retirables
+from WebSecurityServer.settings import numero_objetos_por_pagina
+
 
 
 class ListadoOfertaView(LoginRequiredMixin, View):
@@ -30,14 +32,13 @@ class ListadoOfertaView(LoginRequiredMixin, View):
         except ObjectDoesNotExist:
             usuario = None
         ofertas = lista_ofertas(request)
-        paginator = Paginator(ofertas, 3)
+        paginator = Paginator(ofertas, numero_objetos_por_pagina)
         page_number = request.GET.get('page')
         page_obj_ofertas = paginator.get_page(page_number)
         [ofertas_solicitables, ofertas_retirables] = get_ofertas_solicitables_y_ofertas_retirables(usuario, page_obj_ofertas)
         # Se añaden al contexto las oferta y el usuario y se muestra el listado
         context.update({
             'page_obj_ofertas': page_obj_ofertas,
-            'ofertas': ofertas,
             'usuario': usuario,
             'ofertas_solicitables': ofertas_solicitables,
             'ofertas_retirables': ofertas_retirables,
@@ -57,7 +58,7 @@ class ListadoOfertaPropiaView(LoginRequiredMixin, View):
         except ObjectDoesNotExist:
             usuario = None
         ofertas = lista_ofertas_propias(request)
-        paginator = Paginator(ofertas, 3)
+        paginator = Paginator(ofertas, numero_objetos_por_pagina)
         page_number = request.GET.get('page')
         page_obj_ofertas = paginator.get_page(page_number)
         # Se añaden al contexto las oferta y el usuario y se muestra el listado
@@ -175,7 +176,6 @@ class EdicionOfertaView(LoginRequiredMixin, View):
             return res
         # Se crea un objeto formualrio en base a los datos recibidos
         form = OfertaEdicionForm(request.POST)
-        print(form.errors)
         # Si el formulario es valido, se trata el formulario y se edita la oferta
         if form.is_valid():
             # Se trata el formulario con más detalle
@@ -290,19 +290,21 @@ class DetallesOfertaView(View):
         if usuario == oferta.autor:
             for solicitud in list(Solicitud.objects.filter(oferta=oferta)):
                 solicitantes.append(solicitud.usuario)
+        paginator_solicitantes = Paginator(solicitantes, numero_objetos_por_pagina)
+        page_number_solicitantes = request.GET.get('page_solicitantes')
+        page_obj_solicitantes = paginator_solicitantes.get_page(page_number_solicitantes)
         # Se añaden al contexto la oferta y el usuario
         actividades = oferta.actividades.all()
-        paginator = Paginator(actividades, 3)
-        page_number = request.GET.get('page')
-        page_obj_actividades = paginator.get_page(page_number)
-
+        paginator_actividades = Paginator(actividades, numero_objetos_por_pagina)
+        page_number_actividades = request.GET.get('page_actividades')
+        page_obj_actividades = paginator_actividades.get_page(page_number_actividades)
         context.update({
             'oferta': oferta,
             'usuario': usuario,
             'page_obj_actividades': page_obj_actividades,
             'retirable': retirable,
             'solicitable': solicitable,
-            'solicitantes': solicitantes,
+            'page_obj_usuarios': page_obj_solicitantes,
         })
         # Se muestra la vista de detalles
         return render(request, self.template_name, context)
@@ -468,13 +470,16 @@ class ListadoSolicitudPropiaView(LoginRequiredMixin, View):
         except ObjectDoesNotExist:
             usuario = None
         ofertas = lista_solicitudes_propias(request)
+        paginator = Paginator(ofertas, numero_objetos_por_pagina)
+        page_number = request.GET.get('page')
+        page_obj_ofertas = paginator.get_page(page_number)
         ofertas_retirables = []
-        for oferta in ofertas:
+        for oferta in page_obj_ofertas:
             if not oferta.cerrada and not oferta.vetada:
                 ofertas_retirables.append(oferta)
         # Se añaden al contexto las oferta y el usuario y se muestra el listado
         context.update({
-            'ofertas': ofertas,
+            'page_obj_ofertas': page_obj_ofertas,
             'usuario': usuario,
             'ofertas_retirables': ofertas_retirables,
             'titulo_pagina': 'Mis solicitudes',
@@ -731,3 +736,5 @@ def comprueba_retirar_solicitud_oferta(request, oferta_id):
     except ObjectDoesNotExist as e:
         messages.error(request, 'No se puede retirar la solicitud de una oferta en la que no se tiene una solicitud')
         return HttpResponseRedirect(reverse('oferta_detalles', kwargs={'oferta_id': oferta_id}))
+
+

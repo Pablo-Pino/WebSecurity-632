@@ -1,6 +1,5 @@
 from WebSecurityApp.models.oferta_models import Solicitud, Oferta
 
-
 def get_ofertas_solicitables_y_ofertas_retirables(usuario, ofertas):
     ofertas_solicitables = []
     ofertas_solicitadas = []
@@ -20,3 +19,19 @@ def get_ofertas_solicitables_y_ofertas_retirables(usuario, ofertas):
             if es_solicitable:
                 ofertas_solicitables.append(oferta)
     return [ofertas_solicitables, ofertas_retirables]
+
+def es_oferta_solicitable_o_retirable(usuario, oferta):
+    es_solicitada = Solicitud.objects.filter(usuario=usuario, oferta=oferta).exists()
+    retirable = False
+    solicitable = False
+    if es_solicitada:
+        if not oferta.vetada and not oferta.cerrada:
+            retirable = True
+    else:
+        if not oferta.cerrada and not oferta.vetada and not oferta.borrador:
+            solicitable = True
+            for actividad_requerida in oferta.actividades.all():
+                if not actividad_requerida in usuario.actividades_realizadas.all():
+                    solicitable = False
+                    break
+    return [solicitable, retirable]

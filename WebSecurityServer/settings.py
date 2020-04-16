@@ -80,13 +80,13 @@ WSGI_APPLICATION = 'WebSecurityServer.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql_psycopg2',
-        'NAME': 'pruebatfg',
+        'NAME': 'websecurityapp',
         'USER': 'root',
         'PASSWORD': 'root',
         'HOST': 'localhost',
         'PORT': '',
         'TEST': {
-            'NAME': 'testpruebatfg',
+            'NAME': 'testwebsecurityapp',
             'USER': 'root',
             'PASSWORD': 'root',
         },
@@ -137,3 +137,5 @@ STATICFILES_DIRS = [
 
 LOGIN_URL = '/login/'
 LOGOUT_REDIRECT_URL = ''
+
+numero_objetos_por_pagina = 3

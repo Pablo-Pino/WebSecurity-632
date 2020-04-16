@@ -11,6 +11,9 @@ from WebSecurityApp.models.oferta_models import Oferta, Solicitud
 from WebSecurityApp.models.perfil_models import Usuario
 from WebSecurityApp.models.oferta_models import Oferta
 from WebSecurityApp.views.oferta_views import CreacionOfertaView
+from WebSecurityApp.views.utils import get_ofertas_solicitables_y_ofertas_retirables, es_oferta_solicitable_o_retirable
+from WebSecurityApp.test_unit.utils import test_listado, numero_paginas, paginar_lista
+from WebSecurityServer.settings import numero_objetos_por_pagina
 
 class OfertaTestCase(TestCase):
     
@@ -40,18 +43,30 @@ class OfertaTestCase(TestCase):
         password = 'usuario1'
         self.login(username, password)
         # Se crean variables con los datos correctos
-        usuario_esperado = Usuario.objects.get(django_user__username = username)
-        ofertas_esperadas = list(Oferta.objects.filter(Q(autor__django_user__username = username) |
-                (Q(borrador = False) & Q(vetada=False) & Q(cerrada=False))).order_by('id'))
-        # Se simula una petición al listado de la oferta
-        response = self.client.get('/oferta/listado/')
-        # Se obtienen los resultados
-        usuario_recibido = response.context['usuario']
-        ofertas_recibidas = list(response.context['ofertas'].order_by('id'))
-        # Se comprueba que los resultados son correctos
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(ofertas_esperadas, ofertas_recibidas)
-        self.assertEqual(usuario_esperado, usuario_recibido)
+        usuario_esperado = Usuario.objects.get(django_user__username=username)
+        ofertas_esperadas = Oferta.objects.filter(Q(autor__django_user__username=username) |
+            (Q(borrador=False) & Q(vetada=False) & Q(cerrada=False))).order_by('id')
+        datos_esperados = dict()
+        datos_esperados['usuario'] = usuario_esperado
+        # Se van a obtener las ofertas solicitables y retirables por pagina
+        dict_ofertas_solicitables_esperadas = dict()
+        dict_ofertas_retirables_esperadas = dict()
+        dict_ofertas_esperadas = paginar_lista(ofertas_esperadas)
+        # Se recorren todas las paginas y se obtienen los diccionarios con sendos grupos de actividades paginadas
+        for n_pagina in range(1, numero_paginas(ofertas_esperadas) + 1):
+            [dict_ofertas_solicitables_esperadas[n_pagina], dict_ofertas_retirables_esperadas[n_pagina]] \
+                = get_ofertas_solicitables_y_ofertas_retirables(usuario_esperado, dict_ofertas_esperadas[n_pagina])
+        datos_esperados['ofertas_solicitables'] = dict_ofertas_solicitables_esperadas
+        datos_esperados['ofertas_retirables'] = dict_ofertas_retirables_esperadas
+        datos_esperados['titulo_pagina'] = 'Listado de ofertas'
+        test_listado(self,
+            url = reverse('oferta_listado'),
+            status_code = 200,
+            dato_lista = 'page_obj_ofertas',
+            page_param = 'page',
+            datos_esperados = datos_esperados,
+            lista_esperada = ofertas_esperadas
+        )
         # El usuario se desloguea
         self.logout()
 
@@ -63,17 +78,29 @@ class OfertaTestCase(TestCase):
         self.login(username, password)
         # Se crean variables con los datos correctos
         usuario_esperado = Usuario.objects.get(django_user__username=username)
-        ofertas_esperadas = list(Oferta.objects.filter(Q(autor__django_user__username=username) |
-                (Q(borrador=False) & Q(cerrada=False))).order_by('id'))
-        # Se simula una petición al listado de la oferta
-        response = self.client.get('/oferta/listado/')
-        # Se obtienen los resultados
-        usuario_recibido = response.context['usuario']
-        ofertas_recibidas = list(response.context['ofertas'].order_by('id'))
-        # Se comprueba que los resultados son correctos
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(ofertas_esperadas, ofertas_recibidas)
-        self.assertEqual(usuario_esperado, usuario_recibido)
+        ofertas_esperadas = Oferta.objects.filter(Q(autor__django_user__username=username) |
+            (Q(borrador=False) & Q(cerrada=False))).order_by('id')
+        datos_esperados = dict()
+        datos_esperados['usuario'] = usuario_esperado
+        # Se van a obtener las ofertas solicitables y retirables por pagina
+        dict_ofertas_solicitables_esperadas = dict()
+        dict_ofertas_retirables_esperadas = dict()
+        dict_ofertas_esperadas = paginar_lista(ofertas_esperadas)
+        # Se recorren todas las paginas y se obtienen los diccionarios con sendos grupos de actividades paginadas
+        for n_pagina in range(1, numero_paginas(ofertas_esperadas) + 1):
+            [dict_ofertas_solicitables_esperadas[n_pagina], dict_ofertas_retirables_esperadas[n_pagina]] \
+                = get_ofertas_solicitables_y_ofertas_retirables(usuario_esperado, dict_ofertas_esperadas[n_pagina])
+        datos_esperados['ofertas_solicitables'] = dict_ofertas_solicitables_esperadas
+        datos_esperados['ofertas_retirables'] = dict_ofertas_retirables_esperadas
+        datos_esperados['titulo_pagina'] = 'Listado de ofertas'
+        test_listado(self,
+            url = reverse('oferta_listado'),
+            status_code = 200,
+            dato_lista = 'page_obj_ofertas',
+            page_param = 'page',
+            datos_esperados = datos_esperados,
+            lista_esperada = ofertas_esperadas
+        )
         # El usuario se desloguea
         self.logout()
 
@@ -85,16 +112,18 @@ class OfertaTestCase(TestCase):
         usuario = self.login(username, password)
         # Se crean variables con los datos correctos
         usuario_esperado = Usuario.objects.get(django_user__username=username)
-        ofertas_esperadas = list(Oferta.objects.filter(autor=usuario).order_by('id'))
-        # Se simula una petición al listado de la oferta
-        response = self.client.get('/oferta/listado_propio/')
-        # Se obtienen los resultados
-        usuario_recibido = response.context['usuario']
-        ofertas_recibidas = list(response.context['ofertas'].order_by('id'))
-        # Se comprueba que los resultados son correctos
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(ofertas_esperadas, ofertas_recibidas)
-        self.assertEqual(usuario_esperado, usuario_recibido)
+        ofertas_esperadas = Oferta.objects.filter(autor=usuario).order_by('id')
+        datos_esperados = dict()
+        datos_esperados['usuario'] = usuario_esperado
+        datos_esperados['titulo_pagina'] = 'Mis ofertas'
+        test_listado(self,
+            url = reverse('oferta_listado_propio'),
+            status_code = 200,
+            dato_lista = 'page_obj_ofertas',
+            page_param = 'page',
+            datos_esperados = datos_esperados,
+            lista_esperada = ofertas_esperadas
+        )
         # El usuario se desloguea
         self.logout()
 
@@ -109,15 +138,27 @@ class OfertaTestCase(TestCase):
         ofertas_esperadas = []
         for solicitud in list(Solicitud.objects.filter(usuario=usuario).order_by('id')):
             ofertas_esperadas.append(solicitud.oferta)
-        # Se simula una petición al listado de la oferta
-        response = self.client.get('/oferta/listado_solicitud_propio/')
-        # Se obtienen los resultados
-        usuario_recibido = response.context['usuario']
-        ofertas_recibidas = response.context['ofertas']
-        # Se comprueba que los resultados son correctos
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(ofertas_esperadas, ofertas_recibidas)
-        self.assertEqual(usuario_esperado, usuario_recibido)
+        datos_esperados = dict()
+        datos_esperados['usuario'] = usuario_esperado
+        datos_esperados = dict()
+        datos_esperados['usuario'] = usuario_esperado
+        # Se van a obtener las ofertas solicitables y retirables por pagina
+        dict_ofertas_retirables_esperadas = dict()
+        dict_ofertas_esperadas = paginar_lista(ofertas_esperadas)
+        # Se recorren todas las paginas y se obtienen los diccionarios con sendos grupos de actividades paginadas
+        for n_pagina in range(1, numero_paginas(ofertas_esperadas) + 1):
+            dict_ofertas_retirables_esperadas[n_pagina] = get_ofertas_solicitables_y_ofertas_retirables(
+                usuario_esperado, dict_ofertas_esperadas[n_pagina])[1]
+        datos_esperados['ofertas_retirables'] = dict_ofertas_retirables_esperadas
+        datos_esperados['titulo_pagina'] = 'Mis solicitudes'
+        test_listado(self,
+            url = reverse('oferta_listado_solicitud_propio'),
+            status_code = 200,
+            dato_lista = 'page_obj_ofertas',
+            page_param = 'page',
+            datos_esperados = datos_esperados,
+            lista_esperada = ofertas_esperadas
+        )
         # El usuario se desloguea
         self.logout()
 
@@ -134,15 +175,37 @@ class OfertaTestCase(TestCase):
         # Se obtienen los datos esperados
         usuario_esperado = Usuario.objects.get(django_user__username = username)
         oferta_esperada = Oferta.objects.filter(Q(autor__django_user__username = username) & Q(borrador = True)).first()
+        [es_solicitable, es_retirable] = es_oferta_solicitable_o_retirable(usuario_esperado, oferta_esperada)
+        actividades_esperadas = oferta_esperada.actividades.all()
+        solicitantes_esperados = []
+        for solicitud in list(Solicitud.objects.filter(oferta=oferta_esperada)):
+            solicitantes_esperados.append(solicitud.usuario)
         # Se simula que el usuario accede a los detalles de la oferta
         response = self.client.get('/oferta/detalles/{}/'.format(oferta_esperada.id))
         # Se obtienen los datos recibidos en la petición
         usuario_recibido = response.context['usuario']
         oferta_recibida = response.context['oferta']
+
         # Se comprueba que los datos son correctos
         self.assertEqual(response.status_code, 200)
         self.assertEqual(oferta_esperada, oferta_recibida)
         self.assertEqual(usuario_esperado, usuario_recibido)
+        self.assertEqual(es_retirable, response.context['retirable'])
+        self.assertEqual(es_solicitable, response.context['solicitable'])
+        test_listado(self,
+            lista_esperada = actividades_esperadas,
+            page_param = 'page_actividades',
+            dato_lista = 'page_obj_actividades',
+            url = reverse('oferta_detalles', kwargs={'oferta_id': oferta_esperada.id}),
+            datos_esperados = dict(),
+            status_code = 200)
+        test_listado(self,
+            lista_esperada = solicitantes_esperados,
+            page_param = 'page_solicitantes',
+            dato_lista = 'page_obj_usuarios',
+            url = reverse('oferta_detalles', kwargs={'oferta_id': oferta_esperada.id}),
+            datos_esperados = dict(),
+            status_code = 200)
         # El usuario se desloguea
         self.logout()
 
@@ -1623,6 +1686,3 @@ class OfertaTestCase(TestCase):
         self.logout()
 
 
-
-
-    

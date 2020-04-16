@@ -10,6 +10,10 @@ from WebSecurityApp.models.perfil_models import Usuario
 from WebSecurityApp.models.actividad_models import Actividad
 from WebSecurityApp.views.actividad_views import CreacionActividadesView
 
+from WebSecurityApp.test_unit.utils import test_listado
+
+from WebSecurityServer.settings import numero_objetos_por_pagina
+
 class ActividadTestCase(TestCase):
     
     def setUp(self):
@@ -27,25 +31,31 @@ class ActividadTestCase(TestCase):
     def logout(self):
         self.client.get('/logout/')
 
+
+
+    # LISTADO
+
     # Un usuario accede al listado de actividades correctamente
     def test_lista_actividades(self):
         # Se inicializan variables y el usuario se loguea
         username = 'usuario1'
         password = 'usuario1'
-        self.login(username, password)
+        usuario = self.login(username, password)
         # Se crean variables con los datos correctos
-        usuario_esperado = Usuario.objects.get(django_user__username = username)
-        actividades_esperadas = list(Actividad.objects.filter(Q(autor__django_user__username = username) | Q(borrador = False) &
-                Q(vetada=False)).order_by('id'))
-        # Se simula una petición al listado de la actividad
-        response = self.client.get('/actividad/listado/')
-        # Se obtienen los resultados
-        usuario_recibido = response.context['usuario']
-        actividades_recibidas = list(response.context['actividades'].order_by('id'))
-        # Se comprueba que los resultados son correctos
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(actividades_esperadas, actividades_recibidas)
-        self.assertEqual(usuario_esperado, usuario_recibido)
+        actividades_esperadas = Actividad.objects.filter(
+            Q(autor__django_user__username=username) | Q(borrador=False) & Q(vetada=False)).order_by('id')
+        datos_esperados = dict()
+        datos_esperados['usuario'] = usuario
+        datos_esperados['actividades_realizadas'] = usuario.actividades_realizadas.all()
+        datos_esperados['titulo_pagina']: 'Listado de actividades'
+        # Se realizan los tests
+        test_listado(self,
+            dato_lista = 'page_obj_actividades',
+            datos_esperados = datos_esperados,
+            lista_esperada = actividades_esperadas,
+            page_param = 'page',
+            url = reverse('actividad_listado'),
+            status_code = 200)
         # El usuario se desloguea
         self.logout()
 
@@ -54,43 +64,50 @@ class ActividadTestCase(TestCase):
         # Se inicializan variables y el usuario se loguea
         username = 'usuario2'
         password = 'usuario2'
-        self.login(username, password)
+        usuario = self.login(username, password)
         # Se crean variables con los datos correctos
-        usuario_esperado = Usuario.objects.get(django_user__username=username)
-        actividades_esperadas = list(Actividad.objects.filter(Q(autor__django_user__username=username) |
-                Q(borrador=False)).order_by('id'))
-        # Se simula una petición al listado de la actividad
-        response = self.client.get('/actividad/listado/')
-        # Se obtienen los resultados
-        usuario_recibido = response.context['usuario']
-        actividades_recibidas = list(response.context['actividades'].order_by('id'))
-        # Se comprueba que los resultados son correctos
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(actividades_esperadas, actividades_recibidas)
-        self.assertEqual(usuario_esperado, usuario_recibido)
+        actividades_esperadas = Actividad.objects.filter(
+            Q(autor__django_user__username=username) | Q(borrador=False)).order_by('id')
+        datos_esperados = dict()
+        datos_esperados['usuario'] = usuario
+        datos_esperados['actividades_realizadas'] = usuario.actividades_realizadas.all()
+        datos_esperados['titulo_pagina']: 'Listado de actividades'
+        # Se realizan los tests
+        test_listado(self,
+            dato_lista = 'page_obj_actividades',
+            datos_esperados = datos_esperados,
+            lista_esperada = actividades_esperadas,
+            page_param = 'page',
+            url = reverse('actividad_listado'),
+            status_code = 200)
         # El usuario se desloguea
         self.logout()
 
-    # Un administrador accede al listado de actividades correctamente
+    # Un usuario accede al listado de sus propias actividades
     def test_lista_actividades_propias(self):
         # Se inicializan variables y el usuario se loguea
-        username = 'usuario2'
-        password = 'usuario2'
+        username = 'usuario1'
+        password = 'usuario1'
         usuario = self.login(username, password)
         # Se crean variables con los datos correctos
-        usuario_esperado = Usuario.objects.get(django_user__username=username)
-        actividades_esperadas = list(Actividad.objects.filter(autor=usuario).order_by('id'))
-        # Se simula una petición al listado de la actividad
-        response = self.client.get('/actividad/listado_propio/')
-        # Se obtienen los resultados
-        usuario_recibido = response.context['usuario']
-        actividades_recibidas = list(response.context['actividades'].order_by('id'))
-        # Se comprueba que los resultados son correctos
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(actividades_esperadas, actividades_recibidas)
-        self.assertEqual(usuario_esperado, usuario_recibido)
+        actividades_esperadas = Actividad.objects.filter(autor=usuario).order_by('id')
+        datos_esperados = dict()
+        datos_esperados['usuario'] = usuario
+        datos_esperados['titulo_pagina']: 'Listado de actividades'
+        # Se realizan los tests
+        test_listado(self,
+            dato_lista = 'page_obj_actividades',
+            datos_esperados = datos_esperados,
+            lista_esperada = actividades_esperadas,
+            page_param = 'page',
+            url = reverse('actividad_listado_propio'),
+            status_code = 200)
         # El usuario se desloguea
         self.logout()
+
+
+
+    # DETALLES
 
     # Un usuario accede a los detalles de una actividad correctamente
     def test_detalles_actividad(self):
@@ -128,6 +145,10 @@ class ActividadTestCase(TestCase):
         self.assertRedirects(response, '/actividad/listado/')
         # El usuario se desloguea
         self.logout()
+
+
+
+    # CREACION
 
     # Un usuario crea una actividad correctamente
     def test_crea_actividad(self):
@@ -226,6 +247,10 @@ class ActividadTestCase(TestCase):
         self.assertEqual(numero_actividades_antes, numero_actividades_despues)
         # Se desloguea el usuario
         self.logout()
+
+
+
+    # EDICION
 
     # Un usuario edita una actividad correctamente
     def test_edita_actividad(self):
@@ -406,6 +431,10 @@ class ActividadTestCase(TestCase):
         # El usuario se desloguea
         self.logout()
 
+
+
+    # ELIMINACION
+
     # Un usuario elimina una actividad correctamente
     def test_elimina_actividad(self):
         # Se inicializan variables y se loguea el usuario
@@ -514,7 +543,11 @@ class ActividadTestCase(TestCase):
         self.assertEqual(actividad_eliminada, False)
         # El usuario se desloguea
         self.logout()
-    
+
+
+
+    # VETO
+
     # Un administrador veta una actividad
     def test_veta_actividad(self):
         # Se inicializan variables y se loguea el usuario
@@ -656,6 +689,10 @@ class ActividadTestCase(TestCase):
         # El usuario se desloguea
         self.logout()
 
+
+
+    # LEVANTAMIENTO VETO
+
     # Un administrador levanta el veto sobre una actividad
     def test_levanta_veto_actividad(self):
         # Se inicializan variables y se loguea el usuario
@@ -746,6 +783,4 @@ class ActividadTestCase(TestCase):
         self.assertRedirects(response, '/actividad/listado/')
         # El usuario se desloguea
         self.logout()
-
-
 

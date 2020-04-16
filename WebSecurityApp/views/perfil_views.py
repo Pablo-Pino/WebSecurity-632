@@ -1,3 +1,4 @@
+from django.core.paginator import Paginator
 from django.shortcuts import render
 from django.http import HttpResponse, QueryDict, HttpResponseRedirect
 from django.views import View
@@ -11,6 +12,7 @@ from WebSecurityApp.exceptions import UnallowedUserException
 from WebSecurityApp.forms.perfil_forms import UsuarioForm,  AnexoForm
 from WebSecurityApp.models.perfil_models import Usuario, Anexo
 from WebSecurityApp.services.perfil_services import registra_usuario, usuario_formulario, edita_perfil, anexo_formulario, crea_anexo, edita_anexo, elimina_anexo
+from WebSecurityServer.settings import numero_objetos_por_pagina
 
 
 class RegistroUsuarioView(View):
@@ -52,12 +54,15 @@ class DetallesPerfilView(View):
         # Si se encuentra el usuario, se buscan sus anexos y se le muestra su perfil
         anexos = Anexo.objects.filter(usuario_id = usuario.id).order_by('id')
         # Se obtienen las actividades_realizadas por el usuario
-        actividades_realizadas = usuario.actividades_realizadas.all()
+        actividades_realizadas = usuario.actividades_realizadas.all().order_by('id')
+        paginator = Paginator(actividades_realizadas, numero_objetos_por_pagina)
+        page_number = request.GET.get('page')
+        page_obj_actividades_realizadas = paginator.get_page(page_number)
         context.update({
             'usuario': usuario,
             'usuario_perfil': usuario,
             'anexos': anexos,
-            'actividades_realizadas_detalles': actividades_realizadas,
+            'page_obj_actividades_realizadas': page_obj_actividades_realizadas,
         })
         return render(request, self.template_name, context)
 
@@ -82,12 +87,15 @@ class DetallesPerfilAjenoView(View):
         # Si se encuentra el usuario, se buscan sus anexos y se le muestra su perfil
         anexos = Anexo.objects.filter(usuario_id = usuario_id).order_by('id')
         # Se obtienen las actividades_realizadas por el usuario que no estan vetadas
-        actividades_realizadas = list(usuario_perfil.actividades_realizadas.filter(vetada=False))
+        actividades_realizadas = usuario_perfil.actividades_realizadas.filter(vetada=False).order_by('id')
+        paginator = Paginator(actividades_realizadas, numero_objetos_por_pagina)
+        page_number = request.GET.get('page')
+        page_obj_actividades_realizadas = paginator.get_page(page_number)
         context.update({
             'usuario': usuario,
             'usuario_perfil': usuario_perfil,
             'anexos': anexos,
-            'actividades_realizadas_detalles': actividades_realizadas,
+            'page_obj_actividades_realizadas': page_obj_actividades_realizadas,
         })
         return render(request, self.template_name, context)
 
