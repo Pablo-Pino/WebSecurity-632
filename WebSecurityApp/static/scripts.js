@@ -15,7 +15,7 @@ function selecciona_pagina(n_pagina, pagina_param) {
 
 async function inicia_sesionactividad(identificador) {
     fetch(
-        'http://localhost:8000/sesionactividad/comienzo/' + identificador + '/'
+        'https://localhost:8000/sesionactividad/comienzo/' + identificador + '/'
     ).then(
         (response) => {
             divAlert = document.getElementById('alert-div');
@@ -43,7 +43,7 @@ async function inicia_sesionactividad(identificador) {
 async function finaliza_sesionactividad(identificador) {
     token = Cookies.get('sesionactividad_token');
     csrfToken = Cookies.get('csrftoken');
-    fetch('http://localhost:8000/sesionactividad/final/' + identificador + '/', {
+    fetch('https://localhost:8000/sesionactividad/final/' + identificador + '/', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

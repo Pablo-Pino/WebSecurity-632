@@ -68,27 +68,27 @@ for usuario in usuarios:
 
 anexo_1 = Anexo(
     usuario = usuario_1,
-    anexo = 'http://garcia1ertrabajo.com/'
+    anexo = 'https://garcia1ertrabajo.com/'
 )
 
 anexo_2 = Anexo(
     usuario = usuario_1,
-    anexo = 'http://garciaempresa.com/'
+    anexo = 'https://garciaempresa.com/'
 )
 
 anexo_3 = Anexo(
     usuario = usuario_1,
-    anexo = 'http://garciaofertas.com/'
+    anexo = 'https://garciaofertas.com/'
 )
 
 anexo_4 = Anexo(
     usuario = usuario_1,
-    anexo = 'http://garciainfo.com/'
+    anexo = 'https://garciainfo.com/'
 )
 
 anexo_5 = Anexo(
     usuario = usuario_2,
-    anexo = 'http://normasdelsistema.com/'
+    anexo = 'https://normasdelsistema.com/'
 )
 
 anexos = [
@@ -109,7 +109,7 @@ for anexo in anexos:
 
 actividad_1 = Actividad(
     titulo = 'SQL por Federico',
-    enlace = 'http://sqlfederico.com/',
+    enlace = 'https://sqlfederico.com/',
     descripcion = 'Un tutorial de SQLi basico por Federico. Comentarios son bienvenidos.',
     comentable = True,
     autor = usuario_1,
@@ -121,7 +121,7 @@ actividad_1 = Actividad(
 
 actividad_2 = Actividad(
     titulo = 'JPQL',
-    enlace = 'http://jpqlfed.com/',
+    enlace = 'https://jpqlfed.com/',
     descripcion = 'Ejercicios del lenguaje JPQL, que conecta Java con bases de datos',
     comentable = False,
     autor = usuario_1,
@@ -133,7 +133,7 @@ actividad_2 = Actividad(
 
 actividad_3 = Actividad(
     titulo = 'Angular en detalles',
-    enlace = 'http://jpqlfed.com/',
+    enlace = 'https://jpqlfed.com/',
     descripcion = 'Tutoriales avanzados de Angular. Aun por completar.',
     comentable = False,
     autor = usuario_1,
@@ -145,7 +145,7 @@ actividad_3 = Actividad(
 
 actividad_4 = Actividad(
     titulo = 'Actividad de prueba',
-    enlace = 'http://prueba.com/',
+    enlace = 'https://prueba.com/',
     descripcion = 'Para ver que todo funciona bien.',
     comentable = False,
     autor = usuario_2,
@@ -157,7 +157,7 @@ actividad_4 = Actividad(
 
 actividad_5 = Actividad(
     titulo = 'Vendo coche',
-    enlace = 'http://cochesgratis.com/',
+    enlace = 'https://cochesgratis.com/',
     descripcion = 'El Ferrari esta como nuevo',
     comentable = True,
     autor = usuario_3,
@@ -170,7 +170,7 @@ actividad_5 = Actividad(
 
 actividad_6 = Actividad(
     titulo = 'Una actividad extraña',
-    enlace = 'http://testing.com/',
+    enlace = 'https://testing.com/',
     descripcion = 'Para ver cómo funciona la lógica de la aplicación',
     comentable = False,
     autor = usuario_1,
@@ -183,7 +183,7 @@ actividad_6 = Actividad(
 
 actividad_7 = Actividad(
     titulo = 'Mockingbird',
-    enlace = 'http://localhost:8000/ejercicio/mock/1/',
+    enlace = 'https://localhost:8000/ejercicio/mock/1/',
     descripcion = 'Mock',
     comentable = False,
     autor = usuario_1,
@@ -196,7 +196,7 @@ actividad_7 = Actividad(
 
 actividad_8 = Actividad(
     titulo = 'Mockingbird2',
-    enlace = 'http://localhost:8000/ejercicio/mock/2/',
+    enlace = 'https://localhost:8000/ejercicio/mock/2/',
     descripcion = 'Mock2',
     comentable = False,
     autor = usuario_2,
@@ -209,7 +209,7 @@ actividad_8 = Actividad(
 
 actividad_9 = Actividad(
     titulo = 'Mockingbird3',
-    enlace = 'http://localhost:8000/ejercicio/mock/3/',
+    enlace = 'https://localhost:8000/ejercicio/mock/3/',
     descripcion = 'Mock3',
     comentable = False,
     autor = usuario_1,

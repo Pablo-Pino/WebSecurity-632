@@ -38,10 +38,10 @@ class PerfilTestCase(TestCase):
         password = 'usuario3'
         usuario = self.login(username, password)
         numero_sesionactividad_antes = SesionActividad.objects.count()
-        enlace = 'http://localhost:8000' + reverse('ejercicio_mock_1')
+        enlace = 'https://localhost:8000' + reverse('ejercicio_mock_1')
         actividad = Actividad.objects.get(enlace = enlace)
         # Se accede al ejercicio de ejemplo
-        response = self.client.get('http://localhost:8000' + reverse('sesionactividad_comienzo', kwargs={'identificador': actividad.identificador}))
+        response = self.client.get('https://localhost:8000' + reverse('sesionactividad_comienzo', kwargs={'identificador': actividad.identificador}))
         # Se comprueba que la respuesta es correcta
         self.assertEquals(response.status_code, 200)
         # Se comprueba que se ha generado una nueva sesion de actividad para el usuario y la actividad
@@ -60,10 +60,10 @@ class PerfilTestCase(TestCase):
     def test_crea_sesionactividad_sin_autenticar(self):
         # Se usuario se loguea en el sistema
         numero_sesionactividad_antes = SesionActividad.objects.count()
-        enlace = 'http://localhost:8000' + reverse('ejercicio_mock_1')
+        enlace = 'https://localhost:8000' + reverse('ejercicio_mock_1')
         actividad = Actividad.objects.get(enlace = enlace)
         # Se accede al ejercicio de ejemplo
-        response = self.client.get('http://localhost:8000' + reverse('sesionactividad_comienzo', kwargs={'identificador': actividad.identificador}))
+        response = self.client.get('https://localhost:8000' + reverse('sesionactividad_comienzo', kwargs={'identificador': actividad.identificador}))
         # Se comprueba que la respuesta es correcta
         self.assertEquals(response.status_code, 500)
         # Se comprueba que se ha generado una nueva sesion de actividad para el usuario y la actividad
@@ -82,10 +82,10 @@ class PerfilTestCase(TestCase):
         password = 'usuario1'
         usuario = self.login(username, password)
         numero_sesionactividad_antes = SesionActividad.objects.count()
-        enlace = 'http://localhost:8000' + reverse('ejercicio_mock_2')
+        enlace = 'https://localhost:8000' + reverse('ejercicio_mock_2')
         actividad = Actividad.objects.filter(enlace = enlace).exclude(autor = usuario).first()
         # Se accede al ejercicio de ejemplo
-        response = self.client.get('http://localhost:8000' + reverse('sesionactividad_comienzo', kwargs={'identificador': actividad.identificador}))
+        response = self.client.get('https://localhost:8000' + reverse('sesionactividad_comienzo', kwargs={'identificador': actividad.identificador}))
         # Se comprueba que la respuesta es correcta
         self.assertEquals(response.status_code, 200)
         # Se comprueba que se ha generado una nueva sesion de actividad para el usuario y la actividad
@@ -111,11 +111,11 @@ class PerfilTestCase(TestCase):
         password = 'usuario2'
         usuario = self.login(username, password)
         numero_sesionactividad_antes = SesionActividad.objects.count()
-        enlace = 'http://localhost:8000' + reverse('ejercicio_mock_1')
+        enlace = 'https://localhost:8000' + reverse('ejercicio_mock_1')
         actividad = Actividad.objects.get(enlace=enlace)
         sesionactividad = SesionActividad.objects.get(actividad=actividad, usuario=usuario)
         # Se accede al ejercicio de ejemplo
-        response = self.client.post('http://localhost:8000' + reverse('sesionactividad_final', kwargs={'identificador': actividad.identificador}), {
+        response = self.client.post('https://localhost:8000' + reverse('sesionactividad_final', kwargs={'identificador': actividad.identificador}), {
             'token': sesionactividad.token
         }, content_type="application/json")
         # Se comprueba que la respuesta es correcta
@@ -140,11 +140,11 @@ class PerfilTestCase(TestCase):
     def test_elimina_sesionactividad_sin_autenticar(self):
         # Se usuario se loguea en el sistema
         numero_sesionactividad_antes = SesionActividad.objects.count()
-        enlace = 'http://localhost:8000' + reverse('ejercicio_mock_1')
+        enlace = 'https://localhost:8000' + reverse('ejercicio_mock_1')
         actividad = Actividad.objects.get(enlace=enlace)
         sesionactividad = SesionActividad.objects.get(actividad=actividad)
         # Se accede al ejercicio de ejemplo
-        response = self.client.post('http://localhost:8000' + reverse('sesionactividad_final', kwargs={'identificador': actividad.identificador}), {
+        response = self.client.post('https://localhost:8000' + reverse('sesionactividad_final', kwargs={'identificador': actividad.identificador}), {
             'token': sesionactividad.token
         }, content_type="application/json")
         # Se comprueba que la respuesta es correcta
@@ -164,11 +164,11 @@ class PerfilTestCase(TestCase):
         username = 'usuario3'
         password = 'usuario3'
         usuario = self.login(username, password)
-        enlace = 'http://localhost:8000' + reverse('ejercicio_mock_2')
+        enlace = 'https://localhost:8000' + reverse('ejercicio_mock_2')
         numero_sesionactividad_antes = SesionActividad.objects.count()
         actividad = Actividad.objects.filter(enlace=enlace).exclude(autor=usuario).first()
         # Se accede al ejercicio de ejemplo
-        response = self.client.post('http://localhost:8000' + reverse('sesionactividad_final', kwargs={'identificador': actividad.identificador}), {
+        response = self.client.post('https://localhost:8000' + reverse('sesionactividad_final', kwargs={'identificador': actividad.identificador}), {
             'token': ''
         }, content_type="application/json")
         self.assertEquals(response.status_code, 500)
