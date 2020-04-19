@@ -24,7 +24,7 @@ SECRET_KEY = '8yhv&ee5fvw@=t8g-ika9g&!=g-1+*mfyo4!y9ajonozbb6^p='
 # SECURITY WARNING: don't run with debug turned on in production!
 ALLOWED_HOSTS = ['localhost', '127.0.0.1', '[::1]']
 
-DEBUG = False
+DEBUG = True
 
 # Application definition
 
@@ -129,8 +129,6 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/2.0/howto/static-files/
 
-STATIC_ROOT = '/etc/nginx/WebSecurity/static/'
-
 STATIC_URL = '/static/'
 
 STATICFILES_DIRS = [
@@ -141,7 +139,3 @@ LOGIN_URL = '/login/'
 LOGOUT_REDIRECT_URL = ''
 
 numero_objetos_por_pagina = 3
-
-# SECURE_SSL_REDIRECT = True
-# SESSION_COOKIE_SECURE = True
-# CSRF_COOKIE_SECURE = True

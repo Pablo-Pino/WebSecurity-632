@@ -25,7 +25,7 @@ class SesionActividadComienzo(APIView):
         serializer = SesionActividadSerializer(sesionactividad)
         data = serializer.data
         data['status'] = 'Se ha comenzado la actividad correctamente'
-        json_response = JsonResponse(data, safe=True)
+        json_response = JsonResponse(data, safe=False)
         return json_response
 
 class SesionActividadFinal(APIView):
