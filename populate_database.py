@@ -1,7 +1,7 @@
 from django.contrib.auth.models import User
-from WebSecurityApp.models.actividad_models import Actividad, SesionActividad
-from WebSecurityApp.models.perfil_models import Usuario, Anexo
-from WebSecurityApp.models.oferta_models import Oferta, Solicitud
+from websecurityapp.models.actividad_models import Actividad, SesionActividad
+from websecurityapp.models.perfil_models import Usuario, Anexo
+from websecurityapp.models.oferta_models import Oferta, Solicitud
 from datetime import date
 
 # DJANGO USERS Y USUARIOS
@@ -398,6 +398,18 @@ oferta_9 = Oferta(
     motivo_veto = None,
 )
 
+oferta_10 = Oferta(
+    titulo = 'Spring Web Developer en Almería',
+    descripcion = 'Aunque una de las actividades es un poco extraña se puede hacer bien',
+    autor = usuario_1,
+    borrador = False,
+    vetada = False,
+    fecha_creacion = date(2019, 1, 23),
+    identificador = 'OFR-ASDFGCoh45',
+    cerrada = False,
+    motivo_veto = None,
+)
+
 ofertas = [
     oferta_1,
     oferta_2,
@@ -407,7 +419,8 @@ ofertas = [
     oferta_6,
     oferta_7,
     oferta_8,
-    oferta_9
+    oferta_9,
+    oferta_10
 ]
 
 for oferta in ofertas:
@@ -424,6 +437,7 @@ oferta_6.actividades.set([actividad_2])
 oferta_7.actividades.set([actividad_4])
 oferta_8.actividades.set([actividad_7, actividad_1, actividad_2])
 oferta_9.actividades.set([actividad_9])
+oferta_10.actividades.set([actividad_5, actividad_9])
 
 
 for oferta in ofertas:
