@@ -16,7 +16,7 @@
                 <th>Autor</th>
             </tr>
             {% for oferta in page_obj_ofertas %}
-                {% if oferta.cerrada or oferta.vetada %}
+                {% if oferta.cerrada or oferta.vetada or oferta in ofertas_actividades_vetadas %}
                     <tr style='background-color:rgba(255, 0, 0, 0.4)'>
                 {% elif oferta in ofertas_solicitables %}
                     <tr style='background-color:rgba(0, 255, 0, 0.4)'>

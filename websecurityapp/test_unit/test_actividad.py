@@ -238,7 +238,7 @@ class ActividadTestCase(TestCase):
             'descripcion': descripcion, 
             'comentable': comentable
         })
-        # Se obtienen las varibles de salida
+        # Se obtienen las variables de salida
         numero_actividades_despues = Actividad.objects.count()
         # Se comparan los datos y se comprueba que no se ha creado la actividad, se debe comprobar además que se ha
         # obtenido la página sin redirección y que se ha obtenido correctamente, debido a que se permanece en el 
@@ -273,7 +273,7 @@ class ActividadTestCase(TestCase):
             'comentable': comentable, 
             'borrador': borrador
         })
-        # Se obtienen las varibles de salida
+        # Se obtienen las variables de salida
         actividad_editada = Actividad.objects.get(pk = actividad.id)
         # Se comparan los datos, se debe comprobar que el usuario ha sido redirigido a la página de detalles de la 
         # actividad tras ser editada
@@ -600,9 +600,10 @@ class ActividadTestCase(TestCase):
         response = self.client.post('/actividad/veto/{}/'.format(actividad.id), {'motivo_veto': motivo_veto})
         # Se obtienen las variables de salida
         actividad_despues = Actividad.objects.get(pk = actividad.id)
-        # Se comparan los datos. Se comprueba que la actividad no ha sufrido cambios y que se ha producido un error 403
-        # debido a que el usuario no tiene los permisos de administrador
-        self.assertEqual(response.status_code, 403)
+        # Se comparan los datos. Se comprueba que la actividad no ha sufrido cambios y que se ha redirigido al usuario
+        # a los detalles de la actividad debido a que el usuario no tiene los permisos de administrador
+        self.assertEqual(response.status_code, 302)
+        self.assertRedirects(response, '/actividad/detalles/{}/'.format(actividad.id))
         self.assertEqual(actividad_despues.vetada, False)
         self.assertEqual(actividad_despues.motivo_veto, None)
         # El usuario se desloguea
@@ -741,9 +742,10 @@ class ActividadTestCase(TestCase):
         response = self.client.get('/actividad/levantamiento_veto/{}/'.format(actividad.id))
         # Se obtienen las variables de salida
         actividad_despues = Actividad.objects.get(pk = actividad.id)
-        # Se comparan los datos. Se comprueba que la actividad no ha sufrido cambios y que se ha producido un error 403
-        # debido a que el usuario no tiene los permisos de administrador necesarios.
-        self.assertEqual(response.status_code, 403)
+        # Se comparan los datos. Se comprueba que la actividad no ha sufrido cambios y que se ha redirigido al usuario a
+        # los detalles de la actividad debido a que el usuario no tiene los permisos de administrador necesarios.
+        self.assertEqual(response.status_code, 302)
+        self.assertRedirects(response, '/actividad/detalles/{}/'.format(actividad.id))
         self.assertEqual(actividad_despues.vetada, True)
         self.assertEqual(actividad_despues.motivo_veto, actividad.motivo_veto)
         # El usuario se desloguea

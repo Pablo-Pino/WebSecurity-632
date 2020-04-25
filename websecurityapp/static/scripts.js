@@ -1,9 +1,12 @@
+// La funcio usada para las alertas al usar un boton para redireccionar
 function alerta_redireccion(mensaje, url) {
     eval = window.confirm(mensaje);
     if (eval) 
         window.location.href = url;
 }
 
+// La funcion usada para poder seleccionar la pagina a seleccionar en la paginacion
+// Se activa al pulsar el boton asociado a esta funcionalidad
 function selecciona_pagina(n_pagina, pagina_param) {
     if (n_pagina != null) {
         uri = encodeURI('?' + pagina_param + '=' + n_pagina);
@@ -13,10 +16,14 @@ function selecciona_pagina(n_pagina, pagina_param) {
     }
 }
 
+
+// Ejemplo de script usado para iniciar sesion en una actividad consumiendo la API REST
 async function inicia_sesionactividad(identificador) {
+    // Usa la API REST para iniciar sesion en la actividad
     fetch(
         'http://localhost:8000/sesionactividad/comienzo/' + identificador + '/'
     ).then(
+        // Usa los datos de la respuesta JSON para notificar al usuario si ha sido un éxito o un error
         (response) => {
             divAlert = document.getElementById('alert-div');
             divAlert.innerHTML = '';
@@ -29,6 +36,8 @@ async function inicia_sesionactividad(identificador) {
             divAlert.appendChild(divMensaje);
             return response.json();
     }).then(
+         // Usa los datos dados en la respuesta JSON generada para guardar el token de sesion y
+         // notificar al usuario si ha sido un éxito o un error
         (data) => {
             console.log(data);
             Cookies.set('sesionactividad_token', data['token']);
@@ -40,9 +49,12 @@ async function inicia_sesionactividad(identificador) {
     });
 }
 
+// Ejemplo de script usado para indicar que se ha completado una actividad consumiendo la API REST
 async function finaliza_sesionactividad(identificador) {
+    // Obtiene el token de sesión y el token CSRF a partir de las cookies
     token = Cookies.get('sesionactividad_token');
     csrfToken = Cookies.get('csrftoken');
+    // Consume al API REST para indicar que el usuario ha finalizado la actividad
     fetch('http://localhost:8000/sesionactividad/final/' + identificador + '/', {
         method: 'POST',
         headers: {
@@ -51,6 +63,7 @@ async function finaliza_sesionactividad(identificador) {
         },
         body: JSON.stringify({token: token})
     }).then(
+        // Usa los datos de la respuesta JSON para notificar al usuario si ha sido un éxito o un error
         (response) => {
             jsonResponse = response.json();
             divAlert = document.getElementById('alert-div');
@@ -66,6 +79,7 @@ async function finaliza_sesionactividad(identificador) {
         }
     )
     .then(
+         // Usa los datos dados en la respuesta JSON generada para notificar al usuario si ha sido un éxito o un error
         (data) => {
             // console.log(data);
             divMensaje = document.getElementById('message-div');

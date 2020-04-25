@@ -29,6 +29,7 @@ class ListadoActividadesView(LoginRequiredMixin, View):
             usuario = Usuario.objects.get(django_user_id = request.user.id)
         except ObjectDoesNotExist:
             usuario = None
+        # Se obtiene el listado de actividades y se pagina
         actividades = listado_actividades(request)
         paginator = Paginator(actividades, numero_objetos_por_pagina)
         page_number = request.GET.get('page')
@@ -37,6 +38,7 @@ class ListadoActividadesView(LoginRequiredMixin, View):
         context.update({
             'page_obj_actividades': page_obj_actividades,
             'usuario': usuario,
+            # Se incluyen las actividades realizadas por el usuario, para poder marcarlas al mostrar el listado
             'actividades_realizadas': usuario.actividades_realizadas.all(),
             'titulo_pagina': 'Listado de actividades',
         })
@@ -53,6 +55,7 @@ class ListadoActividadesPropiasView(LoginRequiredMixin, View):
             usuario = Usuario.objects.get(django_user_id = request.user.id)
         except ObjectDoesNotExist:
             usuario = None
+        # Se obtiene el listado de actividades propias y se pagina
         actividades = listado_actividades_propias(request)
         paginator = Paginator(actividades, numero_objetos_por_pagina)
         page_number = request.GET.get('page')
@@ -155,7 +158,7 @@ class EdicionActividadesView(LoginRequiredMixin, View):
             return HttpResponseRedirect(reverse('actividad_detalles', kwargs = {'actividad_id': actividad_id}))
         # Se genera un formulario en base a los datos de la actividad
         form = actividad_formulario(actividad)
-        # Se mete el formulario y la variables de estilo en el contexto, aparte de 
+        # Se mete el formulario y las variables de estilo en el contexto, además de
         # la id de la actividad para el atributo action del formulario
         context.update({
             'actividad_id': actividad_id, 
@@ -179,13 +182,12 @@ class EdicionActividadesView(LoginRequiredMixin, View):
             messages.error(request, 'No se puede editar una actividad que no está en modo borrador')
             return HttpResponseRedirect(reverse('actividad_detalles', kwargs = {'actividad_id': actividad_id}))
         # Se comprueba que el usuario es el autor de la actividad
-        # Se comprueba que el usuario es el autor de la actividad
-        # Si el usuario no es el autor de la actividad, se redirige al usuario a la 
+        # Si el usuario no es el autor de la actividad, se redirige al usuario a la
         # página de los detalles de la actividad con un mensaje de error
         if not request.user.id == actividad.autor.django_user.id:
             messages.error(request, 'No se poseen los permisos necesarios para editar la actividad')
             return HttpResponseRedirect(reverse('actividad_detalles', kwargs = {'actividad_id': actividad_id}))
-        # Se crea un objeto formualrio en base a los datos recibidos
+        # Se crea un objeto formulario en base a los datos recibidos
         form = ActividadEdicionForm(request.POST)
         # Si el formulario es valido, se trata el formulario y se edita la actividad
         if form.is_valid():
@@ -209,18 +211,17 @@ class EdicionActividadesView(LoginRequiredMixin, View):
                 })
                 # Se muestra el formulario de edicion de la actividad
                 return render(request, self.template_name, context)
-            # Si no sucede ningun error, se redirige a los detalles de la actividad
-            # junto con un mensaje de exito
+            # Si no sucede ningún error, se redirige a los detalles de la actividad junto con un mensaje de éxito
             messages.success(request, 'Se ha editado la actividad con exito')
             return HttpResponseRedirect(reverse('actividad_detalles', kwargs = {'actividad_id': actividad.id}))
         # Si el formulario no es valido
         else:
-            # Se valida el formulario con mas detalle
+            # Se valida el formulario con más detalle
             form.clean()
             # Se da un mensaje de error
             messages.error(request, 'Se ha producido un error al editar la actividad')
             # Se inserta en el contexto el formulario, las variables para el estilo de la 
-            # validacion y el id de la actividad para el atributo action del formulario
+            # validación y el id de la actividad para el atributo action del formulario
             context.update({
                 'actividad_id': actividad_id, 
                 'form': form, 
@@ -258,8 +259,7 @@ class EliminacionActividadesView(LoginRequiredMixin, View):
         # Se intenta eliminar la actividad
         try:
             elimina_actividad(request, actividad)
-        # Si hay cualquier excepción, se redirige al usuario los detalles de la actividad
-        # y se da un mensaje de error
+        # Si hay cualquier excepción, se redirige al usuario los detalles de la actividad y se da un mensaje de error
         except Exception as e:
             messages.error(request, 'Se ha producido un error al eliminar la actividad')
             return HttpResponseRedirect(reverse('actividad_detalles', kwargs = {'actividad_id': actividad_id}))
@@ -282,8 +282,7 @@ class DetallesActividadesView(LoginRequiredMixin, View):
         # Se busca la actividad
         try:
             actividad = Actividad.objects.get(pk=actividad_id)
-        # En caso de que no se encuentre la actividad, se redirige al usuario al
-        # listado de actividades
+        # En caso de que no se encuentre la actividad, se redirige al usuario al listado de actividades
         except ObjectDoesNotExist as e:
             return actividad_no_hallada(request)
         # En caso de que la actividad no pertenezca al usuario y esté en modo borrador, entonces se redirige al usuario
@@ -291,6 +290,7 @@ class DetallesActividadesView(LoginRequiredMixin, View):
         if actividad.borrador and actividad.autor != usuario:
             messages.error(request, 'No se tienen los permisos necesarios para acceder a la actividad')
             return HttpResponseRedirect(reverse('actividad_listado'))
+        # Se mira si el usuario ha realizado la actividad, para indicarselo en la vista
         actividad_realizada = False
         if actividad in usuario.actividades_realizadas.all():
             actividad_realizada = True
@@ -303,18 +303,9 @@ class DetallesActividadesView(LoginRequiredMixin, View):
         # Se muestra la vista de detalles
         return render(request, self.template_name, context)
 
-class VetoActividadesView(UserPassesTestMixin, View):
-    # El usuario debe estar autenticado y ser un administrador, se usará el
-    # UserPassesTestMixin pra comprobar ambos
+class VetoActividadesView(LoginRequiredMixin, View):
+    # Se requiere estar autenticado para visitar esta página
     template_name = 'actividad/veto_actividades.html'
-    permission_denied_message = 'No se tienen los permisos necesarios para vetar actividades'
-
-    # Se comprueba que el usuario es un administrador
-    def test_func(self):
-        if not self.request.user.is_authenticated:
-            return False
-        usuario = Usuario.objects.get(django_user = self.request.user)
-        return usuario.es_admin
 
     def get(self, request, actividad_id):
         context = {}
@@ -324,15 +315,19 @@ class VetoActividadesView(UserPassesTestMixin, View):
         # Si no existe se redirige al usuario al listado de actividades
         except ObjectDoesNotExist as e:
             return actividad_no_hallada(request)
+        # Si el usuario no es un administrador, entonces se le redirige a los detalles de la actividad
+        usuario = Usuario.objects.get(django_user=self.request.user)
+        if not usuario.es_admin:
+            messages.error(request, 'No se poseen los permisos necesarios para vetar la actividad')
+            return HttpResponseRedirect(reverse('actividad_detalles', kwargs = {'actividad_id': actividad_id}))
         # Si la actividad está vetada no se puede vetar, por lo que se redirige al usuario a la vista de detalles
         if actividad.vetada:
             messages.error(request, 'No se puede vetar una actividad ya vetada')
             return HttpResponseRedirect(reverse('actividad_detalles', kwargs = {'actividad_id': actividad_id}))
-        # Si la actividad está en modo borrador, no se puede vetar
+        # Si la actividad está en modo borrador, no se puede vetar, por lo que se redirige  al usuario a la vista de detalles
         if actividad.borrador:
             messages.error(request, 'No se puede vetar una actividad que está en modo borrador')
             return HttpResponseRedirect(reverse('actividad_detalles', kwargs = {'actividad_id': actividad_id}))
-        # Se comprueba que el usuario es el autor de la actividad
         # Se crea un formulario vacío para el veto de actividades
         form = ActividadVetoForm()
         # Se inserta en el contexto el formulario, las variables para el estilo de 
@@ -354,11 +349,16 @@ class VetoActividadesView(UserPassesTestMixin, View):
         # Si no la halla redirige al usuario al listado de actividades
         except ObjectDoesNotExist as e:
             return actividad_no_hallada(request)
+        # Si el usuario no es un administrador, entonces se le redirige a los detalles de la actividad
+        usuario = Usuario.objects.get(django_user=self.request.user)
+        if not usuario.es_admin:
+            messages.error(request, 'No se poseen los permisos necesarios para vetar la actividad')
+            return HttpResponseRedirect(reverse('actividad_detalles', kwargs={'actividad_id': actividad_id}))
         # Si la actividad está vetada no se puede vetar, por lo que se redirige al usuario a la vista de detalles
         if actividad.vetada:
             messages.error(request, 'No se puede vetar una actividad ya vetada')
             return HttpResponseRedirect(reverse('actividad_detalles', kwargs = {'actividad_id': actividad_id}))
-        # Si la actividad está en modo borrador, no se puede vetar
+        # Si la actividad está en modo borrador, no se puede vetar, por lo que se redirige al usuario a la vista de detalles
         if actividad.borrador:
             messages.error(request, 'No se puede vetar una actividad que está en modo borrador')
             return HttpResponseRedirect(reverse('actividad_detalles', kwargs = {'actividad_id': actividad_id}))
@@ -408,11 +408,9 @@ class VetoActividadesView(UserPassesTestMixin, View):
             # Se muestra el formulario de veto de la actividad
             return render(request, self.template_name, context)
             
-class LevantamientoVetoActividadesView(UserPassesTestMixin, View):
-    # El usuario debe estar autenticado y ser un administrador, se usará el
-    # UserPassesTestMixin pra comprobar ambos
+class LevantamientoVetoActividadesView(LoginRequiredMixin, View):
+    # Se requiere estar autenticado para visitar esta página
     template_name = 'actividad/listado_actividades.html'
-    permission_denied_message = 'No se tienen los permisos necesarios para levantar el veto sobre actividades'
 
     # Se comprueba que el usuario es un administrador
     def test_func(self):
@@ -429,11 +427,17 @@ class LevantamientoVetoActividadesView(UserPassesTestMixin, View):
         # Si no se encuentra la actividad se redirige al listado de actividades
         except ObjectDoesNotExist as e:
             return actividad_no_hallada(request)
+        # Si el usuario no es un administrador, entonces se le redirige a los detalles de la actividad
+        usuario = Usuario.objects.get(django_user=self.request.user)
+        if not usuario.es_admin:
+            messages.error(request, 'No se poseen los permisos necesarios para levantar el veto sobre la actividad')
+            return HttpResponseRedirect(reverse('actividad_detalles', kwargs={'actividad_id': actividad_id}))
         # Si la actividad no está vetada no se puede levantar el veto, por lo que se redirige al usuario a la vista de detalles
         if not actividad.vetada:
             messages.error(request, 'No se puede levantar el veto a una actividad sin vetar')
             return HttpResponseRedirect(reverse('actividad_detalles', kwargs = {'actividad_id': actividad_id}))
-        # Si la actividad está en modo borrador, no se puede vetar
+        # Si la actividad está en modo borrador, no se puede levantar el veto,
+        # por lo que se redirige al usuario a la vista de detalles
         if actividad.borrador:
             messages.error(request, 'No se puede levantar el veto a una actividad que está en modo borrador')
             return HttpResponseRedirect(reverse('actividad_detalles', kwargs = {'actividad_id': actividad_id}))

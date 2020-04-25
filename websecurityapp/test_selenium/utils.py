@@ -1,10 +1,10 @@
-from django.db.models import Q
+from django.db.models import Q, OuterRef, Exists
 from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.support.wait import WebDriverWait
 
 from websecurityapp.models.oferta_models import Oferta, Solicitud
 from websecurityapp.test_unit.utils import paginar_lista
-from websecurityapp.views.utils import get_ofertas_solicitables_y_ofertas_retirables
+from websecurityapp.views.utils import get_ofertas_solicitables_y_ofertas_retirables, tiene_actividad_vetada
 
 
 def evaluar_columnas_listado_actividades(test_case, actividades_esperadas, usuario, resalta_resueltas, page_param, **kwargs):
@@ -138,14 +138,17 @@ def evaluar_columnas_listado_oferta(test_case, oferta_esperadas, usuario, listad
             if usuario.es_admin:
                 ofertas = list(Oferta.objects.exclude((Q(cerrada=True) | Q(borrador=True)) & ~Q(autor=usuario)))
             else:
-                ofertas = list(Oferta.objects.exclude((Q(cerrada=True) | Q(borrador=True) | Q(vetada=True)) & ~Q(autor=usuario)))
+                ofertas = list(Oferta.objects.annotate(actividades_vetadas=Exists(
+                    Oferta.objects.filter(id=OuterRef('id'), actividades__vetada=True))
+                ).exclude((Q(cerrada=True) | Q(borrador=True) | Q(vetada=True) | Q(actividades_vetadas=True)) & ~Q(autor=usuario)
+                ).order_by('id'))
         [ofertas_solicitables, ofertas_retirables] = get_ofertas_solicitables_y_ofertas_retirables(usuario, oferta_esperadas)
         # Por cada una de las oferta que debe aparecer
         for oferta in dict_ofertas_paginadas[index_dict_ofertas]:
             # Se comprueba el backgorund-color de las filas
             fila = parent_element.find_element_by_xpath('//tr[{}]'.format(i))
             # Si la oferta está cerrada o vetaada el background color el rojizo
-            if oferta.vetada or oferta.cerrada:
+            if oferta.vetada or oferta.cerrada or tiene_actividad_vetada(oferta):
                 test_case.assertEqual(fila.value_of_css_property('background-color'), 'rgba(255, 0, 0, 0.4)')
             # Si el usuario puede solicitar la oferta, entonces el background es verdoso
             elif oferta in ofertas_solicitables and not listado_propio:
@@ -314,6 +317,7 @@ def evaluar_columnas_listado_usuario(test_case, usuarios_esperados, usuario, pag
             except KeyError as e:
                 parent_element = test_case.selenium
 
+# Obtiene los botones para la paginación
 def get_botones(element, boton, page_param):
     if boton == 'primera':
         return element.find_element_by_id('id_{}_primera'.format(page_param))
@@ -326,6 +330,7 @@ def get_botones(element, boton, page_param):
     else:
         return None
 
+# Busca un elemento en función de su id e indica si está presente
 def aparece_elemento_por_id(element, id):
     try:
         element.find_element_by_id(id)
@@ -333,23 +338,30 @@ def aparece_elemento_por_id(element, id):
     except NoSuchElementException:
         return False
 
+# Dados el id de un boton y un listado, busca ese botón dentro de las páginas del listado dado
 def buscar_boton_listado(test_case, id_listado, id_boton, page_param, **kwargs):
     boton = None
+    # Miestras no se haya hallado el botón
     while not boton:
+        # Busca el elemento pagre indicado
         try:
             parent_element = test_case.selenium.find_element_by_id(kwargs['parent_element'])
         except KeyError as e:
             parent_element = test_case.selenium
+        # Busca el listado y la sección de paginación
         listado = parent_element.find_element_by_id(id_listado)
         pagination = listado.find_element_by_id('id_pagination')
+        # Busca el botón para pasar paǵina
         try:
             boton_siguiente = pagination.find_element_by_id('id_{}_siguiente'.format(page_param))
         except NoSuchElementException as e:
             boton_siguiente = None
+        # Busca el botón objetivo
         try:
             return listado.find_element_by_id(id_boton)
         except NoSuchElementException as e:
             boton = None
+        # Si no encuentra el boton objetivo y encuentra el de página siguiente, entonces pasa la página
         if not boton and boton_siguiente:
             boton_siguiente.click()
         else:

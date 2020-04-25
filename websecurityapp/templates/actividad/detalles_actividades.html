@@ -21,7 +21,9 @@
         <p>Titulo : {{ actividad.titulo }}</p>
         <p>Descripcion : {{ actividad.descripcion }}</p>
         <p>Fecha de creacion : {{ actividad.fecha_creacion }}</p> 
-        <p>Autor : {{ actividad.autor.django_user.first_name }} {{ actividad.autor.django_user.last_name }} </p>
+        <p>Autor : {{ actividad.autor.django_user.first_name }} {{ actividad.autor.django_user.last_name }}</p>
+        <button id="button_detalles_autor" onclick="window.location.href = '/perfil/detalles/{{ actividad.autor.id }}/'"
+            >Detalles del autor</button>
         {% if not actividad.vetada %}
             <p><a href="{{actividad.enlace}}">Enlace a la actividad</a></p>
         {% elif actividad.vetada %}

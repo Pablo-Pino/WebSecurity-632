@@ -1,6 +1,6 @@
 from django.test import TestCase, RequestFactory, Client
 from django.urls import reverse
-from django.db.models import Q
+from django.db.models import Q, OuterRef, Exists
 from django.core.exceptions import ObjectDoesNotExist
 
 from datetime import date
@@ -44,8 +44,10 @@ class OfertaTestCase(TestCase):
         self.login(username, password)
         # Se crean variables con los datos correctos
         usuario_esperado = Usuario.objects.get(django_user__username=username)
-        ofertas_esperadas = Oferta.objects.filter(Q(autor__django_user__username=username) |
-            (Q(borrador=False) & Q(vetada=False) & Q(cerrada=False))).order_by('id')
+        ofertas_esperadas = Oferta.objects.annotate(actividades_vetadas=Exists(
+                Oferta.objects.filter(id=OuterRef('id'), actividades__vetada=True))
+            ).exclude((Q(cerrada=True) | Q(borrador=True) | Q(vetada=True) | Q(actividades_vetadas=True)) & ~Q(autor=usuario_esperado)
+            ).order_by('id')
         datos_esperados = dict()
         datos_esperados['usuario'] = usuario_esperado
         # Se van a obtener las ofertas solicitables y retirables por pagina
@@ -59,6 +61,7 @@ class OfertaTestCase(TestCase):
         datos_esperados['ofertas_solicitables'] = dict_ofertas_solicitables_esperadas
         datos_esperados['ofertas_retirables'] = dict_ofertas_retirables_esperadas
         datos_esperados['titulo_pagina'] = 'Listado de ofertas'
+        # Se comprueban los listados
         test_listado(self,
             url = reverse('oferta_listado'),
             status_code = 200,
@@ -93,6 +96,7 @@ class OfertaTestCase(TestCase):
         datos_esperados['ofertas_solicitables'] = dict_ofertas_solicitables_esperadas
         datos_esperados['ofertas_retirables'] = dict_ofertas_retirables_esperadas
         datos_esperados['titulo_pagina'] = 'Listado de ofertas'
+        # Se comprueban los listados
         test_listado(self,
             url = reverse('oferta_listado'),
             status_code = 200,
@@ -116,6 +120,7 @@ class OfertaTestCase(TestCase):
         datos_esperados = dict()
         datos_esperados['usuario'] = usuario_esperado
         datos_esperados['titulo_pagina'] = 'Mis ofertas'
+        # Se comprueban los listados
         test_listado(self,
             url = reverse('oferta_listado_propio'),
             status_code = 200,
@@ -151,6 +156,7 @@ class OfertaTestCase(TestCase):
                 usuario_esperado, dict_ofertas_esperadas[n_pagina])[1]
         datos_esperados['ofertas_retirables'] = dict_ofertas_retirables_esperadas
         datos_esperados['titulo_pagina'] = 'Mis solicitudes'
+        # Se comprueban los listados
         test_listado(self,
             url = reverse('oferta_listado_solicitud_propio'),
             status_code = 200,
@@ -185,13 +191,13 @@ class OfertaTestCase(TestCase):
         # Se obtienen los datos recibidos en la petición
         usuario_recibido = response.context['usuario']
         oferta_recibida = response.context['oferta']
-
         # Se comprueba que los datos son correctos
         self.assertEqual(response.status_code, 200)
         self.assertEqual(oferta_esperada, oferta_recibida)
         self.assertEqual(usuario_esperado, usuario_recibido)
         self.assertEqual(es_retirable, response.context['retirable'])
         self.assertEqual(es_solicitable, response.context['solicitable'])
+        # Se comprueban los listados
         test_listado(self,
             lista_esperada = actividades_esperadas,
             page_param = 'page_actividades',
@@ -320,7 +326,7 @@ class OfertaTestCase(TestCase):
             'descripcion': descripcion,
             'actividades': actividades_post
         })
-        # Se obtienen las varibles de salida
+        # Se obtienen las variables de salida
         numero_ofertas_despues = Oferta.objects.all().count()
         # Se comparan los datos y se comprueba que no se ha creado la oferta, se debe comprobar además que se ha
         # obtenido la página sin redirección y que se ha obtenido correctamente, debido a que se permanece en el 
@@ -636,8 +642,8 @@ class OfertaTestCase(TestCase):
             'borrador': borrador
         })
         oferta_despues = Oferta.objects.get(pk=oferta.id)
-        # Se comparan los datos y se comprueba que el usuario ha sido redirigido a la página de detalles de la
-        # oferta. Esto se debe a que no puede editar una oferta que está cerrada.
+        # Se comparan los datos. Se comprueba que no ha sucedido ninguna redirección y que la página se ha obtenido
+        # correctamente. Esto se debe a que al haber un error de validación el usuario permanece en el formulario.
         self.assertEqual(response.status_code, 200)
         # self.assertRedirects(response, '/oferta/detalles/{}/'.format(oferta.id))
         # Se comprueba que no se ha editado nada
@@ -673,8 +679,8 @@ class OfertaTestCase(TestCase):
             'borrador': borrador
         })
         oferta_despues = Oferta.objects.get(pk=oferta.id)
-        # Se comparan los datos y se comprueba que el usuario ha sido redirigido a la página de detalles de la
-        # oferta. Esto se debe a que no puede editar una oferta que está cerrada.
+        # Se comparan los datos. Se comprueba que no ha sucedido ninguna redirección y que la página se ha obtenido
+        # correctamente. Esto se debe a que al haber un error de validación el usuario permanece en el formulario.
         self.assertEqual(response.status_code, 200)
         # self.assertRedirects(response, '/oferta/detalles/{}/'.format(oferta.id))
         # Se comprueba que no se ha editado nada
@@ -763,7 +769,7 @@ class OfertaTestCase(TestCase):
         # Se comparan los datos. Se comprueba que el usuario ha sido redirigido a los detalles de la oferta y que no
         # se ha eliminado la oferta. Esto se debe a que un usuario no puede eliminar una oferta que no le pertenece.
         self.assertEqual(response.status_code, 302)
-        # Se indica que se espera un codigo 302 en la respuesta debido  otra redireccion
+        # Se indica que se espera un codigo 302 en la respuesta debido otra redireccion
         self.assertRedirects(response, '/oferta/detalles/{}/'.format(oferta.id), target_status_code=302)
         self.assertEqual(numero_ofertas_antes, numero_ofertas_despues)
         self.assertEqual(oferta_eliminada, False)
@@ -789,7 +795,8 @@ class OfertaTestCase(TestCase):
         except ObjectDoesNotExist as e:
             oferta_eliminada = True
         numero_ofertas_despues = Oferta.objects.all().count()
-        # Se comparan los datos
+        # Se comparan los datos. Se comprueba que el usuario ha sido redirigido a los detalles de la oferta y que no
+        # se ha eliminado la oferta. Esto se debe a que un usuario no puede eliminar una oferta que está en modo borrador.
         self.assertEqual(response.status_code, 302)
         self.assertRedirects(response, '/oferta/detalles/{}/'.format(oferta.id))
         self.assertEqual(numero_ofertas_antes, numero_ofertas_despues)
@@ -832,7 +839,7 @@ class OfertaTestCase(TestCase):
         # Se obtienen las variables de salida
         oferta_despues = Oferta.objects.get(pk = oferta.id)
         # Se comparan los datos. Se comprueba que la oferta no ha sufrido cambios y que el usuario ha sido redirigido
-        # al login debido a que hay que esrar autenticado para vetar una oferta.
+        # al login debido a que hay que estar autenticado para vetar una oferta.
         self.assertEqual(response.status_code, 302)
         self.assertRedirects(response, '/login/?next=/oferta/veto/{}/'.format(oferta.id))
         # Se comprueba que la oferta no ha sido vetada
@@ -853,9 +860,10 @@ class OfertaTestCase(TestCase):
         response = self.client.post('/oferta/veto/{}/'.format(oferta.id), {'motivo_veto': motivo_veto})
         # Se obtienen las variables de salida
         oferta_despues = Oferta.objects.get(pk = oferta.id)
-        # Se comparan los datos. Se comprueba que la oferta no ha sufrido cambios y que se ha producido un error 403
-        # debido a que el usuario no tiene los permisos de administrador
-        self.assertEqual(response.status_code, 403)
+        # Se comparan los datos. Se comprueba que la oferta no ha sufrido cambios y que se ha redirigido al usuario a la
+        # página de detalles de la oferta debido a que el usuario no tiene los permisos de administrador
+        self.assertEqual(response.status_code, 302)
+        self.assertRedirects(response, '/oferta/detalles/{}/'.format(oferta.id))
         self.assertEqual(oferta_despues.vetada, False)
         self.assertEqual(oferta_despues.motivo_veto, None)
         # El usuario se desloguea
@@ -1012,9 +1020,10 @@ class OfertaTestCase(TestCase):
         response = self.client.get('/oferta/levantamiento_veto/{}/'.format(oferta.id))
         # Se obtienen las variables de salida
         oferta_despues = Oferta.objects.get(pk = oferta.id)
-        # Se comparan los datos. Se comprueba que la oferta no ha sufrido cambios y que se ha producido un error 403
-        # debido a que el usuario no tiene los permisos de administrador necesarios.
-        self.assertEqual(response.status_code, 403)
+        # Se comparan los datos. Se comprueba que la oferta no ha sufrido cambios y que se ha redirigido al usuario a los
+        # detalles de la oferta debido a que el usuario no tiene los permisos de administrador necesarios.
+        self.assertEqual(response.status_code, 302)
+        self.assertRedirects(response, reverse('oferta_detalles', kwargs={'oferta_id': oferta.id}))
         self.assertEqual(oferta_despues.vetada, True)
         self.assertEqual(oferta_despues.motivo_veto, oferta.motivo_veto)
         # El usuario se desloguea

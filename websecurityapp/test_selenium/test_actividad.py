@@ -238,6 +238,14 @@ class ActividadTestCase(StaticLiveServerTestCase):
         self.assertEqual(texts[1], 'Descripcion : {}'.format(actividad.descripcion))
         self.assertEqual(texts[2], 'Fecha de creacion : {}'.format(actividad_fecha_creacion) )
         self.assertEqual(texts[3], 'Autor : {} {}'.format(actividad.autor.django_user.first_name, actividad.autor.django_user.last_name))
+        # Se comprueba que existe un boton de detalles del autor y que su contenido es correcto
+        boton_detalles_autor = None
+        try:
+            boton_detalles_autor = self.selenium.find_element_by_id('button_detalles_autor')
+        except NoSuchElementException as e:
+            pass
+        self.assertIsNotNone(boton_detalles_autor)
+        self.assertEquals(boton_detalles_autor.text, 'Detalles del autor')
         # Mira si hay un boton de editar
         existe_boton_editar = True
         try:
@@ -783,11 +791,12 @@ class ActividadTestCase(StaticLiveServerTestCase):
         motivo_veto = 'Veto selenium test'
         # Se acccede al formulario de vetar la actividad
         self.selenium.get('%s%s' % (self.live_server_url, '/actividad/veto/{}/'.format(actividad.id)))
-        # Se comprueba que se está en la página de veto de la actividad
-        self.assertEqual('{}/actividad/veto/{}/'.format(self.live_server_url, actividad.id), self.selenium.current_url)
-        # Se comprueba que se devuelve un código 403
-        text_h1 = self.selenium.find_element_by_tag_name('h1').text
-        self.assertEqual(text_h1, '403 Forbidden')
+        # Se comprueba que se ha redirigido a la página de detalles de la oferta
+        self.assertEqual('{}/actividad/detalles/{}/'.format(self.live_server_url, actividad.id),
+                         self.selenium.current_url)
+        # Se busca el mensaje de fallo y se comprueba que es correcto
+        message_danger = self.selenium.find_element_by_class_name('alert-danger')
+        self.assertEqual(message_danger.text, 'No se poseen los permisos necesarios para vetar la actividad')
         # El usuario se desloguea
         self.logout()
     
@@ -944,11 +953,12 @@ class ActividadTestCase(StaticLiveServerTestCase):
         actividad = Actividad.objects.filter(Q(vetada = True) & Q(borrador = False)).first()
         # Se acccede a la url de levantamiento de veto
         self.selenium.get('%s%s' % (self.live_server_url, '/actividad/levantamiento_veto/{}/'.format(actividad.id)))
-        # Se comprueba que se está en la página de levantamiento de veto
-        self.assertEqual('{}/actividad/levantamiento_veto/{}/'.format(self.live_server_url, actividad.id), self.selenium.current_url)
-        # Se comprueba que se ha dado un código 403
-        h1_text = self.selenium.find_element_by_tag_name('h1').text
-        self.assertEqual(h1_text, '403 Forbidden')
+        # Se comprueba que se ha redirigido a la página de detalles de la oferta
+        self.assertEqual('{}/actividad/detalles/{}/'.format(self.live_server_url, actividad.id),
+            self.selenium.current_url)
+        # Se busca el mensaje de fallo y se comprueba que es correcto
+        message_danger = self.selenium.find_element_by_class_name('alert-danger')
+        self.assertEqual(message_danger.text, 'No se poseen los permisos necesarios para levantar el veto sobre la actividad')
         # El usuario se desloguea
         self.logout()
 

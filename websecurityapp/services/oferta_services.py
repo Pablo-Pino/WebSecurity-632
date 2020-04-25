@@ -4,8 +4,9 @@ from datetime import date
 from random import choice
 from django.contrib.auth.hashers import make_password
 from django.core.exceptions import ObjectDoesNotExist
-from django.db.models import Q
+from django.db.models import Q, Exists, OuterRef
 
+from websecurityapp.models.actividad_models import Actividad
 from websecurityapp.models.oferta_models import Oferta, Solicitud
 from websecurityapp.models.perfil_models import Usuario
 from websecurityapp.forms.oferta_forms import OfertaEdicionForm
@@ -20,7 +21,14 @@ def lista_ofertas(request):
     if usuario.es_admin:
         return Oferta.objects.exclude((Q(cerrada=True) | Q(borrador=True)) & ~Q(autor=usuario)).order_by('id')
     else:
-        return Oferta.objects.exclude((Q(cerrada=True) | Q(borrador=True) | Q(vetada=True)) & ~Q(autor=usuario)).order_by('id')
+        # annotate crea un nuevo valor dentro de las entidades, como si crease una nueva columna
+        # En este caso, se crea una nueva columna actividades_vetadas, que indica si la oferta tiene una actividad
+        # vetada o no
+        return Oferta.objects.annotate(actividades_vetadas=Exists(
+                Oferta.objects.filter(id=OuterRef('id'), actividades__vetada=True))
+            ).exclude((Q(cerrada=True) | Q(borrador=True) | Q(vetada=True) | Q(actividades_vetadas=True)) & ~Q(autor=usuario)
+            ).order_by('id')
+
 
 @transaction.atomic
 def lista_ofertas_propias(request):

@@ -26,6 +26,10 @@ class PerfilTestCase(TestCase):
     def logout(self):
         self.client.get('/logout/')
 
+
+
+    # DETALLES
+
     # Un usuario accede a los detalles de su perfil
     def test_detalles_mi_perfil(self):
         # El usuario se loguea y se inicializan las variables
@@ -47,6 +51,7 @@ class PerfilTestCase(TestCase):
         self.assertEqual(usuario_perfil_recibido, usuario_perfil_esperado)
         self.assertEqual(usuario_recibido, usuario_esperado)
         self.assertListEqual(anexos_recibidos, anexos_esperados)
+        # Se comprueba el listado de actividades realizadas
         test_listado(self,
             lista_esperada = actividades_realizadas_esperadas,
             url = reverse('perfil_detalles'),
@@ -78,6 +83,7 @@ class PerfilTestCase(TestCase):
         self.assertEqual(usuario_recibido, usuario_esperado)
         self.assertEqual(usuario_perfil_recibido, usuario_perfil_esperado)
         self.assertListEqual(anexos_recibidos, anexos_esperados)
+        # Se comprueba el listado de actividades realizadas
         test_listado(self,
             lista_esperada=actividades_realizadas_esperadas,
             url=reverse('perfil_detalles_ajeno', kwargs={'usuario_id': usuario_perfil_esperado.id}),
@@ -87,6 +93,10 @@ class PerfilTestCase(TestCase):
             status_code=200)
         # El usuario se desloguea
         self.logout()
+
+
+
+    # EDICIÓN
 
     # Un usuario edita su perfil
     def test_editar_mi_perfil(self):
@@ -200,6 +210,10 @@ class PerfilTestCase(TestCase):
         # El usuario se desloguea
         self.logout()
 
+
+
+    # ADICIÓN DE ANEXOS
+
     # Un usuario añade un anexo a su perfil
     def test_añadir_anexo(self):
         # El usuario se loguea y se inicializan las variables
@@ -261,11 +275,15 @@ class PerfilTestCase(TestCase):
         # Se obtienen los valores recibidos
         numero_anexos_despues = Anexo.objects.filter(usuario = usuario).count()
         # Se comprueba que el usuario permanece en el formulario de creación de anexos y que ha accedido correctamente, 
-        # puesto a que ha insertado datos no válidos. Se comprueba además que no se ha creado nigún nuevo anexo.
+        # puesto a que ha insertado datos no válidos. Se comprueba además que no se ha creado ningún nuevo anexo.
         self.assertEqual(response.status_code, 200)
         self.assertEquals(numero_anexos_antes, numero_anexos_despues)
         # El usuario se desloguea
         self.logout()
+
+
+
+    # EDICIÓN DE ANEXOS
 
     # El usuario edita un anexo de su perfil
     def test_editar_anexo(self):
@@ -374,6 +392,10 @@ class PerfilTestCase(TestCase):
         self.assertEqual(anexo_recibido.usuario, anexo_dado.usuario)
         # El usuario se desloguea
         self.logout()
+
+
+
+    # ELIMINACIÓN DE ANEXOS
 
     # Un usuario elimina un anexo
     def test_eliminar_anexo(self):

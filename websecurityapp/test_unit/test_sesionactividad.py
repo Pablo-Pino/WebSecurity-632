@@ -29,7 +29,7 @@ class PerfilTestCase(TestCase):
 
 
 
-    # CREACION DE SESIONACTIVIDAD
+    # CREACIÓN DE SESIONACTIVIDAD
 
     # Se crea el token de sesión en una actividad para el usuario
     def test_crea_sesionactividad(self):
@@ -72,9 +72,6 @@ class PerfilTestCase(TestCase):
         # El usuario se desloguea
         self.logout()
 
-    # Se crea el token de sesion en la actividad para un usuario sin haber actividad
-    # def test_crea_sesionactividad_sin_actividad(self):
-
     # Se crea el token de sesion en la actividad para un usuario que ya tiene un token de sesion en dicha actividad
     def test_crea_sesionactividad_refresca(self):
         # El usuario se loguea en el sistema
@@ -102,7 +99,7 @@ class PerfilTestCase(TestCase):
 
 
 
-    # ELIMINACION DE SESIONACTIVIDAD
+    # ELIMINACIÓN DE SESIONACTIVIDAD
 
     # Se elimina una sesion
     def test_elimina_sesionactividad(self):

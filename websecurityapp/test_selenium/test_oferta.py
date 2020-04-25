@@ -2,7 +2,7 @@ from django.contrib.staticfiles.testing import StaticLiveServerTestCase
 from django.contrib.auth.models import User
 from django.contrib.messages.middleware import MessageMiddleware
 from django.contrib.sessions.middleware import SessionMiddleware
-from django.db.models import Q
+from django.db.models import Q, Exists, OuterRef
 from django.core.exceptions import ObjectDoesNotExist
 from selenium.webdriver import FirefoxProfile, ActionChains
 
@@ -68,7 +68,10 @@ class OfertaTestCase(StaticLiveServerTestCase):
         self.selenium.get('%s%s' % (self.live_server_url, '/oferta/listado'))
         # Se comprueba que aparecen las ofertas correctas
         usuario = Usuario.objects.get(django_user__username = 'usuario1')
-        ofertas_esperadas = Oferta.objects.filter(Q(autor=usuario) | Q(borrador=False, vetada=False, cerrada=False)).distinct().order_by('id')
+        ofertas_esperadas = Oferta.objects.annotate(actividades_vetadas=Exists(
+            Oferta.objects.filter(id=OuterRef('id'), actividades__vetada=True))
+        ).exclude((Q(cerrada=True) | Q(borrador=True) | Q(vetada=True) | Q(actividades_vetadas=True)) & ~Q(autor=usuario)
+        ).order_by('id')
         ofertas_mostradas = self.selenium.find_elements_by_tag_name('tr')
         # self.assertEqual(len(ofertas_esperadas), len(ofertas_mostradas) - 1)
         # Se comprueba que el contenido de la tabla es correcto
@@ -199,7 +202,7 @@ class OfertaTestCase(StaticLiveServerTestCase):
         self.detalles_oferta(oferta, usuario)
         # El usuario se desloguea
         self.logout()
-    
+
     # Un usuario accede a los detalles de una oferta ajena en modo borrador
     def test_detalles_oferta_ajena_borrador(self):
         # El usuario se loguea y se inicializan las variables más relevantes
@@ -240,7 +243,7 @@ class OfertaTestCase(StaticLiveServerTestCase):
         self.assertEqual(message_danger.text, 'No se ha encontrado la oferta')
         # El usuario se desloguea
         self.logout()
-    
+
     def detalles_oferta(self, oferta, usuario):
         # Se inicializan variables necesarias
         ofertas = []
@@ -283,6 +286,14 @@ class OfertaTestCase(StaticLiveServerTestCase):
         self.assertEqual(texts[1], 'Descripcion : {}'.format(oferta.descripcion))
         self.assertEqual(texts[2], 'Fecha de creacion : {}'.format(oferta_fecha_creacion))
         self.assertEqual(texts[3], 'Autor : {} {}'.format(oferta.autor.django_user.first_name, oferta.autor.django_user.last_name))
+        # Comprueba que hay un boton de detalles del autor y que es correcto
+        boton_detalles_autor = None
+        try:
+            boton_detalles_autor = self.selenium.find_element_by_id('button_detalles_autor')
+        except NoSuchElementException as e:
+            pass
+        self.assertIsNotNone(boton_detalles_autor)
+        self.assertEquals(boton_detalles_autor.text, 'Detalles del autor')
         # Comprueba el fieldset de actividades
         fieldset_actividades = self.selenium.find_element_by_id('fieldset_actividades')
         # Comprueba el legend del fieldset
@@ -1197,16 +1208,17 @@ class OfertaTestCase(StaticLiveServerTestCase):
     def test_veta_oferta_usuario_incorrecto(self):
         # El usuario se loguea
         usuario = self.login('usuario1', 'usuario1')
-        # Se obtienen las vriaables que se van a usar en el test
+        # Se obtienen las variables que se van a usar en el test
         oferta = Oferta.objects.filter(vetada=False, borrador=False, cerrada=False).first()
         motivo_veto = 'Veto selenium test'
         # Se acccede al formulario de vetar la oferta
         self.selenium.get('%s%s' % (self.live_server_url, '/oferta/veto/{}/'.format(oferta.id)))
-        # Se comprueba que se está en la página de veto de la oferta
-        self.assertEqual('{}/oferta/veto/{}/'.format(self.live_server_url, oferta.id), self.selenium.current_url)
-        # Se comprueba que se devuelve un código 403
-        text_h1 = self.selenium.find_element_by_tag_name('h1').text
-        self.assertEqual(text_h1, '403 Forbidden')
+        # Se comprueba que se ha redirigido a la página de detalles de la oferta
+        self.assertEqual('{}/oferta/detalles/{}/'.format(self.live_server_url, oferta.id),
+                         self.selenium.current_url)
+        # Se busca el mensaje de fallo y se comprueba que es correcto
+        message_danger = self.selenium.find_element_by_class_name('alert-danger')
+        self.assertEqual(message_danger.text, 'No se poseen los permisos necesarios para vetar la oferta')
         # El usuario se desloguea
         self.logout()
 
@@ -1385,12 +1397,12 @@ class OfertaTestCase(StaticLiveServerTestCase):
         oferta = Oferta.objects.filter(Q(vetada=True) & Q(borrador=False)).first()
         # Se acccede a la url de levantamiento de veto
         self.selenium.get('%s%s' % (self.live_server_url, '/oferta/levantamiento_veto/{}/'.format(oferta.id)))
-        # Se comprueba que se está en la página de levantamiento de veto
-        self.assertEqual('{}/oferta/levantamiento_veto/{}/'.format(self.live_server_url, oferta.id),
+        # Se comprueba que se ha redirigido a la página de detalles de la oferta
+        self.assertEqual('{}/oferta/detalles/{}/'.format(self.live_server_url, oferta.id),
                          self.selenium.current_url)
-        # Se comprueba que se ha dado un código 403
-        h1_text = self.selenium.find_element_by_tag_name('h1').text
-        self.assertEqual(h1_text, '403 Forbidden')
+        # Se busca el mensaje de fallo y se comprueba que es correcto
+        message_danger = self.selenium.find_element_by_class_name('alert-danger')
+        self.assertEqual(message_danger.text, 'No se poseen los permisos necesarios para levantar el veto sobre la oferta')
         # El usuario se desloguea
         self.logout()
 
@@ -1539,6 +1551,7 @@ class OfertaTestCase(StaticLiveServerTestCase):
 
     # TESTS SOLICITUD
 
+    # Un usuario solicita una oferta con éxito
     def test_solicita_oferta(self):
         # El usuario se loguea y se obtienen las variables que se van a usar en el test
         usuario = self.login('usuario1', 'usuario1')
@@ -1574,6 +1587,7 @@ class OfertaTestCase(StaticLiveServerTestCase):
         # El usuario se desloguea
         self.logout()
 
+    # Un usuario trata de solicitar una oferta cuyos requisitos no cumple
     def test_solicita_oferta_sin_requisitos(self):
         # El usuario se loguea y se obtienen las variables que se van a usar en el test
         usuario = self.login('usuario3', 'usuario3')
@@ -1608,9 +1622,9 @@ class OfertaTestCase(StaticLiveServerTestCase):
         wait_driver.until(
             lambda driv: driv.current_url == '{}/oferta/detalles/{}/'.format(self.live_server_url, oferta.id))
         self.assertEqual('{}/oferta/detalles/{}/'.format(self.live_server_url, oferta.id), self.selenium.current_url)
-        # Se busca el mensaje de éxito y se comprueba que es correcto
-        message_success = self.selenium.find_element_by_class_name('alert-danger')
-        self.assertEqual(message_success.text, 'No se puede solicitar una oferta cuyos actividades requeridas no se han resuelto')
+        # Se busca el mensaje de fallo y se comprueba que es correcto
+        message_danger = self.selenium.find_element_by_class_name('alert-danger')
+        self.assertEqual(message_danger.text, 'No se puede solicitar una oferta cuyos actividades requeridas no se han resuelto')
         # Se comprueba que se ha solicitado la oferta
         try:
             solicitud = Solicitud.objects.get(usuario=usuario, oferta=oferta)
@@ -1620,6 +1634,7 @@ class OfertaTestCase(StaticLiveServerTestCase):
         # El usuario se desloguea
         self.logout()
 
+    # Un usuario trata de solicitar una oferta que está en modo borrador
     def test_solicita_oferta_borrador(self):
         # El usuario se loguea y se obtienen las variables que se van a usar en el test
         usuario = self.login('usuario3', 'usuario3')
@@ -1654,7 +1669,7 @@ class OfertaTestCase(StaticLiveServerTestCase):
         wait_driver.until(
             lambda driv: driv.current_url == '{}/oferta/listado/'.format(self.live_server_url, oferta.id))
         self.assertEqual('{}/oferta/listado/'.format(self.live_server_url), self.selenium.current_url)
-        # Se busca el mensaje de éxito y se comprueba que es correcto
+        # Se busca el mensaje de fallo y se comprueba que es correcto
         messages_error = self.selenium.find_elements_by_class_name('alert-danger')
         mensaje_error_correcto = False
         for mensaje_error in messages_error:
@@ -1671,6 +1686,7 @@ class OfertaTestCase(StaticLiveServerTestCase):
         # El usuario se desloguea
         self.logout()
 
+    # Un usuario trata de solicitar una oferta que está cerrada
     def test_solicita_oferta_cerrada(self):
         # El usuario se loguea y se obtienen las variables que se van a usar en el test
         usuario = self.login('usuario1', 'usuario1')
@@ -1706,9 +1722,9 @@ class OfertaTestCase(StaticLiveServerTestCase):
             lambda driv: driv.current_url == '{}/oferta/detalles/{}/'.format(self.live_server_url, oferta.id))
         self.assertEqual('{}/oferta/detalles/{}/'.format(self.live_server_url, oferta.id),
                          self.selenium.current_url)
-        # Se busca el mensaje de éxito y se comprueba que es correcto
-        message_success = self.selenium.find_element_by_class_name('alert-danger')
-        self.assertEqual(message_success.text, 'No se puede solicitar una oferta que está cerrada')
+        # Se busca el mensaje de fallo y se comprueba que es correcto
+        message_danger = self.selenium.find_element_by_class_name('alert-danger')
+        self.assertEqual(message_danger.text, 'No se puede solicitar una oferta que está cerrada')
         # Se comprueba que se ha solicitado la oferta
         try:
             solicitud = Solicitud.objects.get(usuario=usuario, oferta=oferta)
@@ -1718,6 +1734,7 @@ class OfertaTestCase(StaticLiveServerTestCase):
         # El usuario se desloguea
         self.logout()
 
+    # Un usuario trata de solicitar una oferta que está vetada
     def test_solicita_oferta_vetada(self):
         # El usuario se loguea y se obtienen las variables que se van a usar en el test
         usuario = self.login('usuario1', 'usuario1')
@@ -1753,9 +1770,9 @@ class OfertaTestCase(StaticLiveServerTestCase):
             lambda driv: driv.current_url == '{}/oferta/detalles/{}/'.format(self.live_server_url, oferta.id))
         self.assertEqual('{}/oferta/detalles/{}/'.format(self.live_server_url, oferta.id),
                          self.selenium.current_url)
-        # Se busca el mensaje de éxito y se comprueba que es correcto
-        message_success = self.selenium.find_element_by_class_name('alert-danger')
-        self.assertEqual(message_success.text, 'No se puede solicitar una oferta vetada')
+        # Se busca el mensaje de fallo y se comprueba que es correcto
+        message_danger = self.selenium.find_element_by_class_name('alert-danger')
+        self.assertEqual(message_danger.text, 'No se puede solicitar una oferta vetada')
         # Se comprueba que se ha solicitado la oferta
         try:
             solicitud = Solicitud.objects.get(usuario=usuario, oferta=oferta)
@@ -1814,6 +1831,7 @@ class OfertaTestCase(StaticLiveServerTestCase):
         # El usuario se desloguea
         self.logout()
 
+    # Un usuario trata de solicitar una oferta sin estar autenticado
     def test_solicita_oferta_sin_autenticar(self):
         # Se busca una oferta que se pueda solicitar
         ofertas_posibles = []
@@ -1826,6 +1844,7 @@ class OfertaTestCase(StaticLiveServerTestCase):
         # Se comprueba que se está en la página de login
         self.assertEqual('{}/login/?next=/oferta/solicitud/{}/'.format(self.live_server_url, oferta.id), self.selenium.current_url)
 
+    # Un usuario trata de solicitar una oferta que no existe
     def test_solicita_oferta_inexistente(self):
         # El usuario se loguea y se obtienen las variables que se van a usar en el test
         usuario = self.login('usuario1', 'usuario1')
@@ -1843,7 +1862,6 @@ class OfertaTestCase(StaticLiveServerTestCase):
 
     # Un usuario solicita una oferta que tiene un requisito vetado
     def test_solicita_oferta_requisito_vetado(self):
-        print(Oferta.objects.count())
         # El usuario se loguea y se obtienen las variables que se van a usar en el test
         usuario = self.login('usuario2', 'usuario2')
         # Se busca una oferta que se pueda solicitar. En este caso se añade la condición de que uno de los requisitos de
@@ -1898,6 +1916,7 @@ class OfertaTestCase(StaticLiveServerTestCase):
     
     # TESTS RETIRO SOLICITUD
 
+    # Un usuario retira una de sus solicitudes
     def test_retira_solicitud(self):
         # El usuario se loguea y se obtienen las variables que se van a usar en el test
         usuario = self.login('usuario2', 'usuario2')
@@ -1928,6 +1947,7 @@ class OfertaTestCase(StaticLiveServerTestCase):
         # El usuario se desloguea
         self.logout()
 
+    # Un usuario trata de retirar una solicitud de una oferta que no ha solicitado
     def test_retira_solicitud_sin_solicitar(self):
         # El usuario se loguea y se obtienen las variables que se van a usar en el test
         usuario = self.login('usuario1', 'usuario1')
@@ -1950,9 +1970,9 @@ class OfertaTestCase(StaticLiveServerTestCase):
         wait_driver.until(
             lambda driv: driv.current_url == '{}/oferta/detalles/{}/'.format(self.live_server_url, oferta.id))
         self.assertEqual('{}/oferta/detalles/{}/'.format(self.live_server_url, oferta.id), self.selenium.current_url)
-        # Se busca el mensaje de éxito y se comprueba que es correcto
-        message_success = self.selenium.find_element_by_class_name('alert-danger')
-        self.assertEqual(message_success.text, 'No se puede retirar la solicitud de una oferta en la que no se tiene una solicitud')
+        # Se busca el mensaje de error y se comprueba que es correcto
+        message_danger = self.selenium.find_element_by_class_name('alert-danger')
+        self.assertEqual(message_danger.text, 'No se puede retirar la solicitud de una oferta en la que no se tiene una solicitud')
         # Se comprueba que no existe la solicitud de la oferta
         try:
             solicitud = Solicitud.objects.get(usuario=usuario, oferta=oferta)
@@ -1962,6 +1982,7 @@ class OfertaTestCase(StaticLiveServerTestCase):
         # El usuario se desloguea
         self.logout()
 
+    # Un usuario trata de retirar una solicitud de una oferta que no está vetada
     def test_retira_solicitud_oferta_vetada(self):
         # El usuario se loguea y se obtienen las variables que se van a usar en el test
         usuario = self.login('usuario1', 'usuario1')
@@ -1975,9 +1996,9 @@ class OfertaTestCase(StaticLiveServerTestCase):
         wait_driver.until(
             lambda driv: driv.current_url == '{}/oferta/detalles/{}/'.format(self.live_server_url, oferta.id))
         self.assertEqual('{}/oferta/detalles/{}/'.format(self.live_server_url, oferta.id), self.selenium.current_url)
-        # Se busca el mensaje de éxito y se comprueba que es correcto
-        message_success = self.selenium.find_element_by_class_name('alert-danger')
-        self.assertEqual(message_success.text, 'No se puede retirar la solicitud de una oferta vetada')
+        # Se busca el mensaje de error y se comprueba que es correcto
+        message_danger = self.selenium.find_element_by_class_name('alert-danger')
+        self.assertEqual(message_danger.text, 'No se puede retirar la solicitud de una oferta vetada')
         # Se comprueba que no se ha retirado la solicitud de la oferta
         try:
             solicitud = Solicitud.objects.get(usuario=usuario, oferta=oferta)
@@ -1987,6 +2008,7 @@ class OfertaTestCase(StaticLiveServerTestCase):
         # El usuario se desloguea
         self.logout()
 
+    # Un usuario trata de retirar una solicitud de una oferta que está cerrada
     def test_retira_solicitud_oferta_cerrada(self):
         # El usuario se loguea y se obtienen las variables que se van a usar en el test
         usuario = self.login('usuario3', 'usuario3')
@@ -2001,9 +2023,9 @@ class OfertaTestCase(StaticLiveServerTestCase):
             lambda driv: driv.current_url == '{}/oferta/detalles/{}/'.format(self.live_server_url, oferta.id))
         self.assertEqual('{}/oferta/detalles/{}/'.format(self.live_server_url, oferta.id),
                          self.selenium.current_url)
-        # Se busca el mensaje de éxito y se comprueba que es correcto
-        message_success = self.selenium.find_element_by_class_name('alert-danger')
-        self.assertEqual(message_success.text, 'No se puede retirar la solicitud de una oferta que está cerrada')
+        # Se busca el mensaje de error y se comprueba que es correcto
+        message_danger = self.selenium.find_element_by_class_name('alert-danger')
+        self.assertEqual(message_danger.text, 'No se puede retirar la solicitud de una oferta que está cerrada')
         # Se comprueba que no se ha retirado la solicitud de la oferta
         try:
             solicitud = Solicitud.objects.get(usuario=usuario, oferta=oferta)
@@ -2013,6 +2035,7 @@ class OfertaTestCase(StaticLiveServerTestCase):
         # El usuario se desloguea
         self.logout()
 
+    # Un usuario trata de retirar una solicitud de una oferta si estar autenticado
     def test_retira_solicitud_oferta_sin_autenticar(self):
         # Se inicializan las variables necesarias
         numero_solicitudes_antes = Solicitud.objects.all().count()
@@ -2028,6 +2051,7 @@ class OfertaTestCase(StaticLiveServerTestCase):
         # El usuario se desloguea
         self.logout()
 
+    # Un usuario trata de retirar una solicitud de una oferta que no existe
     def test_retira_solicitud_oferta_inexistente(self):
         # El usuario se loguea y se obtienen las variables que se van a usar en el test
         usuario = self.login('usuario1', 'usuario1')
@@ -2035,9 +2059,9 @@ class OfertaTestCase(StaticLiveServerTestCase):
         self.selenium.get('%s%s' % (self.live_server_url, '/oferta/retiro_solicitud/{}/'.format(0)))
         # Se comprueba que se está en la página de listado de ofertas
         self.assertEqual('{}/oferta/listado/'.format(self.live_server_url), self.selenium.current_url)
-        # Se busca el mensaje de éxito y se comprueba que es correcto
-        message_success = self.selenium.find_element_by_class_name('alert-danger')
-        self.assertEqual(message_success.text, 'No se ha encontrado la oferta')
+        # Se busca el mensaje de fallo y se comprueba que es correcto
+        message_danger = self.selenium.find_element_by_class_name('alert-danger')
+        self.assertEqual(message_danger.text, 'No se ha encontrado la oferta')
         # El usuario se desloguea
         self.logout()
 
