@@ -213,8 +213,8 @@ class OfertaTestCase(StaticLiveServerTestCase):
         # Se comprueba que el usuario ha sido redirigido al listado de ofertas con un mensaje de error
         self.assertEqual('{}/oferta/listado/'.format(self.live_server_url), self.selenium.current_url)
         # Se comprueba que el mensaje de error se muestra correctamente
-        message_success = self.selenium.find_element_by_class_name('alert-danger')
-        self.assertEqual(message_success.text, 'No se tienen los permisos necesarios para acceder a la oferta')
+        message_error = self.selenium.find_element_by_class_name('alert-danger')
+        self.assertEqual(message_error.text, 'No se tienen los permisos necesarios para acceder a la oferta')
         # El usuario se desloguea
         self.logout()
     
@@ -550,8 +550,8 @@ class OfertaTestCase(StaticLiveServerTestCase):
         # Se comprueba que el usuario permanece en el formulario
         self.assertEqual('{}/oferta/creacion/'.format(self.live_server_url), self.selenium.current_url)
         # Se comprueba que el mensaje de error se muestra correctamente
-        message_success = self.selenium.find_element_by_class_name('alert-danger')
-        self.assertEqual(message_success.text, 'Se ha producido un error al crear la oferta')
+        message_error = self.selenium.find_element_by_class_name('alert-danger')
+        self.assertEqual(message_error.text, 'Se ha producido un error al crear la oferta')
         # Se comprueba que el mensaje de validacion aparece correctamente
         error_actividades = self.selenium.find_element_by_xpath(
             '//select[@id="id_actividades"]/following::div[@class="invalid-feedback"][1]')
@@ -598,8 +598,8 @@ class OfertaTestCase(StaticLiveServerTestCase):
         # Se comprueba que el usuario permanece en el formulario
         self.assertEqual('{}/oferta/creacion/'.format(self.live_server_url), self.selenium.current_url)
         # Se comprueba que el mensaje de error se muestra correctamente
-        message_success = self.selenium.find_element_by_class_name('alert-danger')
-        self.assertEqual(message_success.text, 'Se ha producido un error al crear la oferta')
+        message_error = self.selenium.find_element_by_class_name('alert-danger')
+        self.assertEqual(message_error.text, 'Se ha producido un error al crear la oferta')
         # Se comprueba que el mensaje de validacion aparece correctamente
         error_actividades = self.selenium.find_element_by_xpath(
             '//select[@id="id_actividades"]/following::div[@class="invalid-feedback"][1]')
@@ -658,7 +658,7 @@ class OfertaTestCase(StaticLiveServerTestCase):
                          self.selenium.current_url)
         # Se comprueba que el mensaje de éxito se muestra correctamente
         message_success = self.selenium.find_element_by_class_name('alert-success')
-        self.assertEqual(message_success.text, 'Se ha editado la oferta con exito')
+        self.assertEqual(message_success.text, 'Se ha editado la oferta con éxito')
         # El usuario se desloguea
         self.logout()
 
@@ -788,8 +788,8 @@ class OfertaTestCase(StaticLiveServerTestCase):
         self.assertEqual('{}/oferta/edicion/{}/'.format(self.live_server_url, oferta.id),
                          self.selenium.current_url)
         # Se comprueba que el mensaje de error se muestra correctamente
-        message_success = self.selenium.find_element_by_class_name('alert-danger')
-        self.assertEqual(message_success.text, 'Se ha producido un error al editar la oferta')
+        message_error = self.selenium.find_element_by_class_name('alert-danger')
+        self.assertEqual(message_error.text, 'Se ha producido un error al editar la oferta')
         # Se comprueba que el mensaje de validacion aparece correctamente
         error_actividades = self.selenium.find_element_by_xpath(
             '//select[@id="id_actividades"]/following::div[@class="invalid-feedback"][1]')
@@ -840,8 +840,8 @@ class OfertaTestCase(StaticLiveServerTestCase):
         self.assertEqual('{}/oferta/edicion/{}/'.format(self.live_server_url, oferta.id),
                          self.selenium.current_url)
         # Se comprueba que el mensaje de error se muestra correctamente
-        message_success = self.selenium.find_element_by_class_name('alert-danger')
-        self.assertEqual(message_success.text, 'Se ha producido un error al editar la oferta')
+        message_error = self.selenium.find_element_by_class_name('alert-danger')
+        self.assertEqual(message_error.text, 'Se ha producido un error al editar la oferta')
         # Se comprueba que el mensaje de validacion aparece correctamente
         error_actividades = self.selenium.find_element_by_xpath(
             '//select[@id="id_actividades"]/following::div[@class="invalid-feedback"][1]')
@@ -890,8 +890,8 @@ class OfertaTestCase(StaticLiveServerTestCase):
         self.assertEqual('{}/oferta/edicion/{}/'.format(self.live_server_url, oferta.id),
                          self.selenium.current_url)
         # Se comprueba que el mensaje de error se muestra correctamente
-        message_success = self.selenium.find_element_by_class_name('alert-danger')
-        self.assertEqual(message_success.text, 'Se ha producido un error al editar la oferta')
+        message_error = self.selenium.find_element_by_class_name('alert-danger')
+        self.assertEqual(message_error.text, 'Se ha producido un error al editar la oferta')
         # Se comprueba que el mensaje de validacion aparece correctamente
         error_actividades = self.selenium.find_element_by_xpath(
             '//select[@id="id_actividades"]/following::div[@class="invalid-feedback"][1]')
@@ -941,8 +941,8 @@ class OfertaTestCase(StaticLiveServerTestCase):
         self.assertEqual('{}/oferta/edicion/{}/'.format(self.live_server_url, oferta.id),
                          self.selenium.current_url)
         # Se comprueba que el mensaje de error se muestra correctamente
-        message_success = self.selenium.find_element_by_class_name('alert-danger')
-        self.assertEqual(message_success.text, 'Se ha producido un error al editar la oferta')
+        message_error = self.selenium.find_element_by_class_name('alert-danger')
+        self.assertEqual(message_error.text, 'Se ha producido un error al editar la oferta')
         # Se comprueba que el mensaje de validacion aparece correctamente
         error_actividades = self.selenium.find_element_by_xpath(
             '//select[@id="id_actividades"]/following::div[@class="invalid-feedback"][1]')
@@ -995,7 +995,7 @@ class OfertaTestCase(StaticLiveServerTestCase):
         # Aparece el mensaje de eliminacion correctamente
         message_success = self.selenium.find_element_by_class_name('alert-success')
         self.assertEqual(message_success.text, 'Se ha eliminado la oferta con exito')
-        # Se comrpueba que se ha eliminado la oferta de la base de datos
+        # Se comprueba que se ha eliminado la oferta de la base de datos
         numero_ofertas_despues = Oferta.objects.count()
         self.assertEqual(numero_ofertas_antes, numero_ofertas_despues + 1)
         oferta_eliminada = True
@@ -1513,6 +1513,10 @@ class OfertaTestCase(StaticLiveServerTestCase):
         self.selenium.get('%s%s' % (self.live_server_url, '/oferta/cierre/{}/'.format(oferta.id)))
         # Se comprueba que se está en la página de detalles
         self.assertEqual('{}/oferta/detalles/{}/'.format(self.live_server_url, oferta.id), self.selenium.current_url)
+        self.assertEqual('{}/oferta/detalles/{}/'.format(self.live_server_url, oferta.id), self.selenium.current_url)
+        # Se busca el mensaje de fallo y se comprueba que es correcto
+        message_danger = self.selenium.find_element_by_class_name('alert-danger')
+        self.assertEqual(message_danger.text, 'No se poseen los permisos o requisitos necesarios para realizar esta accion')
         # El usuario se desloguea
         self.logout()
 
@@ -1852,8 +1856,8 @@ class OfertaTestCase(StaticLiveServerTestCase):
         # Se acccede a la url de solicitud de la oferta
         self.selenium.get('%s%s' % (self.live_server_url, '/oferta/solicitud/0/'))
         # Se comprueba que el mensaje de error es correcto
-        message_success = self.selenium.find_element_by_class_name('alert-danger')  
-        self.assertEqual(message_success.text, 'No se ha encontrado la oferta')           
+        message_error = self.selenium.find_element_by_class_name('alert-danger')  
+        self.assertEqual(message_error.text, 'No se ha encontrado la oferta')
         # Se comprueba que no ha solicitado la oferta
         numero_solicitudes_despues = Solicitud.objects.all().count()
         self.assertEqual(numero_solicitudes_antes, numero_solicitudes_despues)
