@@ -19,7 +19,6 @@ from websecurityserver.settings import numero_objetos_por_pagina
 
 
 class ListadoActividadesView(LoginRequiredMixin, View):
-    # No se requieren permisos para visitar esta pagina
     template_name = 'actividad/listado_actividades.html'
 
     def get(self, request):
@@ -45,7 +44,6 @@ class ListadoActividadesView(LoginRequiredMixin, View):
         return render(request, self.template_name, context)
 
 class ListadoActividadesPropiasView(LoginRequiredMixin, View):
-    # No se requieren permisos para visitar esta pagina
     template_name = 'actividad/listado_actividades.html'
 
     def get(self, request):

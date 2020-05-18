@@ -54,7 +54,6 @@ class ListadoOfertaView(LoginRequiredMixin, View):
         return render(request, self.template_name, context)
 
 class ListadoOfertaPropiaView(LoginRequiredMixin, View):
-    # No se requieren permisos para visitar esta pagina
     template_name = 'oferta/listado_ofertas.html'
 
     def get(self, request):
