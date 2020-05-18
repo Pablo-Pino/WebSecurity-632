@@ -9,4 +9,5 @@ omit =
     */admin.py
     */urls.py
     */settings.py
+    /usr/*
     
